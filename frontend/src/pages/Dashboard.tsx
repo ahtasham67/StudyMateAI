@@ -1,4 +1,4 @@
-// Dashboard component for StudyMate application
+// Dashboard component for StudyMateAI application
 import React, { useState, useEffect } from 'react';
 import {
   Container,

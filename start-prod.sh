@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# StudyMate - Production Build and Start Script
+# StudyMateAI - Production Build and Start Script
 # This script builds both applications and starts them in production mode
 
-echo "🏭 Building and Starting StudyMate for Production..."
+echo "🏭 Building and Starting StudyMateAI for Production..."
 echo "==================================================="
 
 # Get the script directory

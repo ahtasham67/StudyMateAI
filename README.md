@@ -1,6 +1,6 @@
-# StudyMate
+# StudyMateAI
 
-A comprehensive full-stack web application for managing study sessions and notes, built with Java Spring Boot backend and React TypeScript frontend.
+A comprehensive full-stack web application for managing study sessions and notes with AI-powered features, built with Java Spring Boot backend and React TypeScript frontend.
 
 ## 🌟 Features
 
@@ -52,7 +52,7 @@ A comprehensive full-stack web application for managing study sessions and notes
 ## 📁 Project Structure
 
 ```
-StudyMate/
+StudyMateAI/
 ├── backend/                 # Spring Boot application
 │   ├── src/main/java/
 │   │   └── com/studymate/
@@ -176,7 +176,7 @@ This interactive script gives you options to start the application in different 
 ```bash
 ./stop-all.sh
 ```
-- Stops all running StudyMate services
+- Stops all running StudyMateAI services
 - Cleans up ports 3000 and 8080
 - Kills any remaining processes
 
