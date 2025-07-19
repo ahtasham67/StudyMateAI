@@ -47,7 +47,7 @@ const Navigation: React.FC = () => {
     <AppBar position="static">
       <Toolbar>
         <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-          StudyMate
+          StudyMateAI
         </Typography>
 
         <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>

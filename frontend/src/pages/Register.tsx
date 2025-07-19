@@ -176,7 +176,7 @@ const Register: React.FC = () => {
           >
             <School sx={{ fontSize: 40, color: "primary.main", mb: 2 }} />
             <Typography component="h1" variant="h4" gutterBottom>
-              StudyMate
+              StudyMateAI
             </Typography>
             <Typography component="h2" variant="h5" gutterBottom>
               Sign Up

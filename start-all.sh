@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# StudyMate - Start All Services Script
+# StudyMateAI - Start All Services Script
 # This script starts both backend and frontend services
 
-echo "🚀 Starting StudyMate Application..."
+echo "🚀 Starting StudyMateAI Application..."
 echo "=================================="
 
 # Function to check if a command exists
@@ -54,7 +54,7 @@ echo "🔗 Testing database connection..."
 if PGPASSWORD=123 /usr/local/opt/postgresql@14/bin/psql -U studymate -d studymate_db -c "SELECT 1;" >/dev/null 2>&1; then
     echo "✅ Database connection successful."
 else
-    echo "❌ Cannot connect to StudyMate database. Please check PostgreSQL setup."
+    echo "❌ Cannot connect to StudyMateAI database. Please check PostgreSQL setup."
     exit 1
 fi
 
@@ -146,7 +146,7 @@ fi
 echo "✅ Frontend started successfully!"
 
 echo ""
-echo "🎉 StudyMate is now running!"
+echo "🎉 StudyMateAI is now running!"
 echo "=================================="
 echo "📱 Frontend: http://localhost:3000"
 echo "🔧 Backend API: http://localhost:8080"

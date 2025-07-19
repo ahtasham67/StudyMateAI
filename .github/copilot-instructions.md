@@ -1,10 +1,10 @@
 <!-- Use this file to provide workspace-specific custom instructions to Copilot. For more details, visit https://code.visualstudio.com/docs/copilot/copilot-customization#_use-a-githubcopilotinstructionsmd-file -->
 
-# StudyMate Application Development Guidelines
+# StudyMateAI Application Development Guidelines
 
 ## Project Overview
 
-StudyMate is a full-stack web application for student study management, built with:
+StudyMateAI is a full-stack web application for AI-powered student study management, built with:
 
 - **Backend**: Java Spring Boot with PostgreSQL database
 - **Frontend**: React with TypeScript and Material-UI
@@ -47,7 +47,7 @@ StudyMate is a full-stack web application for student study management, built wi
 ### Backend Structure
 
 ```
-com.studymate.backend/
+com.studymateai.backend/
 ├── config/          # Configuration classes (Security, CORS, etc.)
 ├── controller/      # REST API controllers
 ├── dto/            # Data Transfer Objects

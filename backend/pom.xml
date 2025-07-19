@@ -8,11 +8,11 @@
 		<version>3.2.0</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>com.studymate</groupId>
-	<artifactId>studymate-backend</artifactId>
+	<groupId>com.studymateai</groupId>
+	<artifactId>studymateai-backend</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>StudyMate</name>
-	<description>StudyMate backend application</description>
+	<name>StudyMateAI</name>
+	<description>StudyMateAI backend application</description>
 	<properties>
 		<java.version>17</java.version>
 	</properties>

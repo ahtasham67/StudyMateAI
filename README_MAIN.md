@@ -1,6 +1,6 @@
-# StudyMate Project
+# StudyMateAI Project
 
-This repository contains the StudyMate application - a full-stack study management system.
+This repository contains the StudyMateAI application - a full-stack AI-powered study management system.
 
 ## Branches
 

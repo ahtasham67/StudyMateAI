@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# StudyMate - Development Start Script
+# StudyMateAI - Development Start Script
 # This script starts both backend and frontend in development mode with live reload
 
-echo "🔥 Starting StudyMate in Development Mode..."
+echo "🔥 Starting StudyMateAI in Development Mode..."
 echo "============================================"
 
 # Get the script directory
@@ -31,7 +31,7 @@ echo "🔗 Testing database connection..."
 if PGPASSWORD=123 /usr/local/opt/postgresql@14/bin/psql -U studymate -d studymate_db -c "SELECT 1;" >/dev/null 2>&1; then
     echo "✅ Database connection successful."
 else
-    echo "❌ Cannot connect to StudyMate database. Please check PostgreSQL setup."
+    echo "❌ Cannot connect to StudyMateAI database. Please check PostgreSQL setup."
     exit 1
 fi
 

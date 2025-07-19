@@ -1,7 +1,10 @@
-#!/bin/bash
+#!/binecho "🎓 StudyMateAI Application Launcher"
+echo "======================================"
+echo ""
+echo "Select how you want to start StudyMateAI:"h
 
-# StudyMate - Main Launcher Script
-# This script provides options to start StudyMate in different modes
+# StudyMateAI - Main Launcher Script
+# This script provides options to start StudyMateAI in different modes
 
 clear
 echo "🎓 StudyMate Application Launcher"
