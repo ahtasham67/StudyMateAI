@@ -1,35 +1,35 @@
 // Dashboard component for StudyMateAI application
-import React, { useState, useEffect } from 'react';
 import {
-  Container,
-  Typography,
-  Box,
-  Card,
-  CardContent,
-  Button,
-  Paper,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-  Chip,
-  Alert,
-  CircularProgress,
-} from '@mui/material';
-import {
-  School,
+  Add,
   Note,
+  PlayArrow,
+  School,
+  Stop,
   Timer,
   TrendingUp,
-  Add,
-  PlayArrow,
-  Stop,
-} from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { studySessionAPI, notesAPI } from '../services/api';
-import { StudySession, Note as NoteType, StudySessionStats } from '../types';
-import { format } from 'date-fns';
+} from "@mui/icons-material";
+import {
+  Alert,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Chip,
+  CircularProgress,
+  Container,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Paper,
+  Typography,
+} from "@mui/material";
+import { format } from "date-fns";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { notesAPI, studySessionAPI } from "../services/api";
+import { Note as NoteType, StudySession, StudySessionStats } from "../types";
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
@@ -38,7 +38,7 @@ const Dashboard: React.FC = () => {
   const [recentSessions, setRecentSessions] = useState<StudySession[]>([]);
   const [recentNotes, setRecentNotes] = useState<NoteType[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState<string>("");
 
   useEffect(() => {
     fetchDashboardData();
@@ -47,18 +47,19 @@ const Dashboard: React.FC = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const [statsResponse, sessionsResponse, notesResponse] = await Promise.all([
-        studySessionAPI.getStats(),
-        studySessionAPI.getAll(),
-        notesAPI.getAll(),
-      ]);
+      const [statsResponse, sessionsResponse, notesResponse] =
+        await Promise.all([
+          studySessionAPI.getStats(),
+          studySessionAPI.getAll(),
+          notesAPI.getAll(),
+        ]);
 
       setStats(statsResponse.data);
       setRecentSessions(sessionsResponse.data.slice(0, 5));
       setRecentNotes(notesResponse.data.slice(0, 5));
     } catch (err: any) {
-      setError('Failed to load dashboard data');
-      console.error('Dashboard error:', err);
+      setError("Failed to load dashboard data");
+      console.error("Dashboard error:", err);
     } finally {
       setLoading(false);
     }
@@ -67,13 +68,20 @@ const Dashboard: React.FC = () => {
   const formatDuration = (minutes: number) => {
     const hours = Math.floor(minutes / 60);
     const remainingMinutes = minutes % 60;
-    return hours > 0 ? `${hours}h ${remainingMinutes}m` : `${remainingMinutes}m`;
+    return hours > 0
+      ? `${hours}h ${remainingMinutes}m`
+      : `${remainingMinutes}m`;
   };
 
   if (loading) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+        <Box
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          minHeight="200px"
+        >
           <CircularProgress />
         </Box>
       </Container>
@@ -93,12 +101,16 @@ const Dashboard: React.FC = () => {
       )}
 
       {/* Stats Cards */}
-      <Box 
-        sx={{ 
-          display: 'grid', 
-          gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' },
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: {
+            xs: "1fr",
+            sm: "1fr 1fr",
+            md: "repeat(4, 1fr)",
+          },
           gap: 3,
-          mb: 4 
+          mb: 4,
         }}
       >
         <Card>
@@ -116,7 +128,7 @@ const Dashboard: React.FC = () => {
             </Box>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent>
             <Box display="flex" alignItems="center">
@@ -126,13 +138,13 @@ const Dashboard: React.FC = () => {
                   Total Study Time
                 </Typography>
                 <Typography variant="h4">
-                  {stats ? formatDuration(stats.totalMinutes) : '0m'}
+                  {stats ? formatDuration(stats.totalMinutes) : "0m"}
                 </Typography>
               </Box>
             </Box>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent>
             <Box display="flex" alignItems="center">
@@ -142,13 +154,15 @@ const Dashboard: React.FC = () => {
                   Average Session
                 </Typography>
                 <Typography variant="h4">
-                  {stats ? formatDuration(Math.round(stats.averageDuration)) : '0m'}
+                  {stats
+                    ? formatDuration(Math.round(stats.averageDuration))
+                    : "0m"}
                 </Typography>
               </Box>
             </Box>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent>
             <Box display="flex" alignItems="center">
@@ -175,7 +189,7 @@ const Dashboard: React.FC = () => {
           <Button
             variant="contained"
             startIcon={<PlayArrow />}
-            onClick={() => navigate('/study-sessions')}
+            onClick={() => navigate("/study-sessions")}
             size="large"
           >
             Start Study Session
@@ -183,7 +197,7 @@ const Dashboard: React.FC = () => {
           <Button
             variant="outlined"
             startIcon={<Add />}
-            onClick={() => navigate('/notes')}
+            onClick={() => navigate("/notes")}
             size="large"
           >
             Create Note
@@ -192,32 +206,44 @@ const Dashboard: React.FC = () => {
       </Paper>
 
       {/* Recent Content */}
-      <Box 
-        sx={{ 
-          display: 'grid', 
-          gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
-          gap: 3 
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+          gap: 3,
         }}
       >
         {/* Recent Study Sessions */}
         <Paper sx={{ p: 3 }}>
-          <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+          <Box
+            display="flex"
+            justifyContent="space-between"
+            alignItems="center"
+            mb={2}
+          >
             <Typography variant="h6">Recent Study Sessions</Typography>
-            <Button onClick={() => navigate('/study-sessions')}>View All</Button>
+            <Button onClick={() => navigate("/study-sessions")}>
+              View All
+            </Button>
           </Box>
           {recentSessions.length > 0 ? (
             <List>
               {recentSessions.map((session) => (
                 <ListItem key={session.id}>
                   <ListItemIcon>
-                    {session.endTime ? <Stop color="action" /> : <PlayArrow color="primary" />}
+                    {session.endTime ? (
+                      <Stop color="action" />
+                    ) : (
+                      <PlayArrow color="primary" />
+                    )}
                   </ListItemIcon>
                   <ListItemText
                     primary={session.title}
                     secondary={
                       <Box>
                         <Typography variant="body2" color="text.secondary">
-                          {session.subject} • {format(new Date(session.startTime), 'MMM dd, yyyy')}
+                          {session.subject} •{" "}
+                          {format(new Date(session.startTime), "MMM dd, yyyy")}
                         </Typography>
                         {session.durationMinutes && (
                           <Chip
@@ -233,15 +259,22 @@ const Dashboard: React.FC = () => {
               ))}
             </List>
           ) : (
-            <Typography color="text.secondary">No study sessions yet</Typography>
+            <Typography color="text.secondary">
+              No study sessions yet
+            </Typography>
           )}
         </Paper>
 
         {/* Recent Notes */}
         <Paper sx={{ p: 3 }}>
-          <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+          <Box
+            display="flex"
+            justifyContent="space-between"
+            alignItems="center"
+            mb={2}
+          >
             <Typography variant="h6">Recent Notes</Typography>
-            <Button onClick={() => navigate('/notes')}>View All</Button>
+            <Button onClick={() => navigate("/notes")}>View All</Button>
           </Box>
           {recentNotes.length > 0 ? (
             <List>
@@ -260,7 +293,7 @@ const Dashboard: React.FC = () => {
                           </Typography>
                         )}
                         <Typography variant="body2" color="text.secondary">
-                          {format(new Date(note.createdAt), 'MMM dd, yyyy')}
+                          {format(new Date(note.createdAt), "MMM dd, yyyy")}
                         </Typography>
                       </Box>
                     }

@@ -50,7 +50,7 @@ const Login: React.FC = () => {
         lastName: data.lastName,
         createdAt: new Date().toISOString(),
       };
-      login(data.token, user);
+      login(data.accessToken, user);
       console.log("Login successful", user);
       navigate("/dashboard");
     } catch (err: any) {

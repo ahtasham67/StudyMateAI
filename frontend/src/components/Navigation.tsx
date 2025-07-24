@@ -4,6 +4,7 @@ import {
   Logout,
   Note,
   School,
+  UploadFile,
 } from "@mui/icons-material";
 import {
   AppBar,
@@ -73,6 +74,14 @@ const Navigation: React.FC = () => {
             onClick={() => navigate("/notes")}
           >
             Notes
+          </Button>
+
+          <Button
+            color="inherit"
+            startIcon={<UploadFile />}
+            onClick={() => navigate("/study-materials")}
+          >
+            Study Materials
           </Button>
 
           <IconButton

@@ -13,6 +13,7 @@ import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import Notes from "./pages/Notes";
 import Register from "./pages/Register";
+import StudyFiles from "./pages/StudyFiles";
 import StudySessions from "./pages/StudySessions";
 
 const theme = createTheme({
@@ -39,7 +40,7 @@ function AppContent() {
             {!user && (
               <AppBar position="static" sx={{ mb: 4 }}>
                 <Toolbar>
-                                    <Typography variant="h2" component="h1" gutterBottom>
+                  <Typography variant="h2" component="h1" gutterBottom>
                     StudyMateAI
                   </Typography>
                 </Toolbar>
@@ -65,6 +66,10 @@ function AppContent() {
               <Route
                 path="/notes"
                 element={user ? <Notes /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/study-materials"
+                element={user ? <StudyFiles /> : <Navigate to="/login" />}
               />
               <Route
                 path="/"

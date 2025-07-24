@@ -58,7 +58,7 @@ const Register: React.FC = () => {
       setError("Email must be no more than 50 characters long");
       return false;
     }
-    
+
     // Email format validation (basic)
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
@@ -75,7 +75,7 @@ const Register: React.FC = () => {
       setError("Password must be no more than 40 characters long");
       return false;
     }
-    
+
     // Password confirmation validation
     if (formData.password !== confirmPassword) {
       setError("Passwords do not match");
@@ -127,17 +127,17 @@ const Register: React.FC = () => {
         createdAt: new Date().toISOString(),
       };
 
-      login(response.token, user);
+      login(response.accessToken, user);
       console.log(user);
       console.log("Registration and login successful");
 
       navigate("/dashboard");
     } catch (err: any) {
       console.error("Registration error:", err);
-      
+
       // Handle validation errors from backend
       if (err.response?.status === 400) {
-        if (typeof err.response.data === 'string') {
+        if (typeof err.response.data === "string") {
           setError(err.response.data);
         } else if (err.response.data?.message) {
           setError(err.response.data.message);
