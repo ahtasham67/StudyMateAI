@@ -4,6 +4,12 @@ export interface User {
   email: string;
   firstName: string;
   lastName: string;
+  profilePhotoUrl?: string;
+  universityName?: string;
+  currentTerm?: string;
+  academicYear?: string;
+  major?: string;
+  yearOfStudy?: string;
   createdAt: string;
 }
 
@@ -36,6 +42,7 @@ export interface AuthContextType {
   token: string | null;
   login: (token: string, user: User) => void;
   logout: () => void;
+  updateUser: (user: User) => void;
   isAuthenticated: boolean;
 }
 
@@ -52,6 +59,17 @@ export interface RegisterRequest {
   lastName: string;
 }
 
+export interface ProfileUpdateRequest {
+  firstName: string;
+  lastName: string;
+  email: string;
+  universityName?: string;
+  currentTerm?: string;
+  academicYear?: string;
+  major?: string;
+  yearOfStudy?: string;
+}
+
 export interface AuthResponse {
   accessToken: string;
   tokenType: string;
@@ -61,11 +79,65 @@ export interface AuthResponse {
   firstName: string;
   lastName: string;
   role: string;
+  profilePhotoUrl?: string;
+  universityName?: string;
+  currentTerm?: string;
+  academicYear?: string;
+  major?: string;
+  yearOfStudy?: string;
 }
 
 export interface StudySessionStats {
-  totalSessions: number;
-  totalMinutes: number;
-  averageDuration: number;
-  sessionsThisWeek: number;
+  completedSessions: number;
+  totalStudyTime: number;
+}
+
+export interface StudyMaterial {
+  id: number;
+  filename: string;
+  originalFilename: string;
+  fileType: "PDF" | "PPTX";
+  fileSize: number;
+  uploadDate: string;
+  subject?: string;
+  description?: string;
+}
+
+export interface Quiz {
+  id: number;
+  title: string;
+  description?: string;
+  studyMaterialId: number;
+  studyMaterialName: string;
+  totalQuestions: number;
+  durationMinutes: number;
+  createdAt: string;
+  updatedAt: string;
+  questions?: QuizQuestion[];
+}
+
+export interface QuizQuestion {
+  id: number;
+  questionNumber: number;
+  questionText: string;
+  questionType: "MULTIPLE_CHOICE" | "TRUE_FALSE" | "SHORT_ANSWER";
+  points: number;
+  explanation?: string;
+  options?: QuizOption[];
+}
+
+export interface QuizOption {
+  id: number;
+  optionNumber: number;
+  optionText: string;
+  isCorrect: boolean;
+}
+
+export interface CreateQuizRequest {
+  title: string;
+  description?: string;
+  studyMaterialId: number;
+  numberOfQuestions: number;
+  durationMinutes: number;
+  difficulty: "EASY" | "MEDIUM" | "HARD";
 }

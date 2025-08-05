@@ -1,8 +1,10 @@
 import {
   AccountCircle,
   Dashboard,
+  Edit,
   Logout,
   Note,
+  Quiz,
   School,
   UploadFile,
 } from "@mui/icons-material";
@@ -38,6 +40,23 @@ const Navigation: React.FC = () => {
     logout();
     navigate("/login");
     handleClose();
+  };
+
+  const handleProfile = () => {
+    navigate("/profile");
+    handleClose();
+  };
+
+  const getProfilePhotoUrl = () => {
+    if (user?.profilePhotoUrl) {
+      // If the URL already starts with /api, use it directly with localhost
+      if (user.profilePhotoUrl.startsWith("/api/")) {
+        return `http://localhost:8080${user.profilePhotoUrl}`;
+      }
+      // Otherwise, add the /api prefix
+      return `http://localhost:8080/api${user.profilePhotoUrl}`;
+    }
+    return null;
   };
 
   if (!isAuthenticated) {
@@ -84,6 +103,14 @@ const Navigation: React.FC = () => {
             Study Materials
           </Button>
 
+          <Button
+            color="inherit"
+            startIcon={<Quiz />}
+            onClick={() => navigate("/quizzes")}
+          >
+            Quizzes
+          </Button>
+
           <IconButton
             size="large"
             aria-label="account of current user"
@@ -92,8 +119,14 @@ const Navigation: React.FC = () => {
             onClick={handleMenu}
             color="inherit"
           >
-            <Avatar sx={{ width: 32, height: 32 }}>
-              {user?.firstName?.[0] || user?.username?.[0] || <AccountCircle />}
+            <Avatar
+              sx={{ width: 32, height: 32 }}
+              src={getProfilePhotoUrl() || undefined}
+            >
+              {!getProfilePhotoUrl() &&
+                (user?.firstName?.[0] || user?.username?.[0] || (
+                  <AccountCircle />
+                ))}
             </Avatar>
           </IconButton>
 
@@ -121,6 +154,10 @@ const Navigation: React.FC = () => {
               <Typography variant="body2" color="text.secondary">
                 {user?.email}
               </Typography>
+            </MenuItem>
+            <MenuItem onClick={handleProfile}>
+              <Edit fontSize="small" sx={{ mr: 1 }} />
+              Update Profile
             </MenuItem>
             <MenuItem onClick={handleLogout}>
               <Logout fontSize="small" sx={{ mr: 1 }} />

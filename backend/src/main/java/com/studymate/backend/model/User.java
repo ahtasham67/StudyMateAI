@@ -18,6 +18,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Lob;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -57,6 +58,36 @@ public class User implements UserDetails {
 
     @Enumerated(EnumType.STRING)
     private Role role = Role.STUDENT;
+
+    @Column(name = "profile_photo_url")
+    private String profilePhotoUrl;
+
+    @Lob
+    @Column(name = "profile_photo_data")
+    private byte[] profilePhotoData;
+
+    @Column(name = "profile_photo_content_type")
+    private String profilePhotoContentType;
+
+    @Size(max = 100)
+    @Column(name = "university_name")
+    private String universityName;
+
+    @Size(max = 50)
+    @Column(name = "current_term")
+    private String currentTerm;
+
+    @Size(max = 50)
+    @Column(name = "academic_year")
+    private String academicYear;
+
+    @Size(max = 100)
+    @Column(name = "major")
+    private String major;
+
+    @Size(max = 50)
+    @Column(name = "year_of_study")
+    private String yearOfStudy;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -170,6 +201,70 @@ public class User implements UserDetails {
 
     public void setRole(Role role) {
         this.role = role;
+    }
+
+    public String getProfilePhotoUrl() {
+        return profilePhotoUrl;
+    }
+
+    public void setProfilePhotoUrl(String profilePhotoUrl) {
+        this.profilePhotoUrl = profilePhotoUrl;
+    }
+
+    public byte[] getProfilePhotoData() {
+        return profilePhotoData;
+    }
+
+    public void setProfilePhotoData(byte[] profilePhotoData) {
+        this.profilePhotoData = profilePhotoData;
+    }
+
+    public String getProfilePhotoContentType() {
+        return profilePhotoContentType;
+    }
+
+    public void setProfilePhotoContentType(String profilePhotoContentType) {
+        this.profilePhotoContentType = profilePhotoContentType;
+    }
+
+    public String getUniversityName() {
+        return universityName;
+    }
+
+    public void setUniversityName(String universityName) {
+        this.universityName = universityName;
+    }
+
+    public String getCurrentTerm() {
+        return currentTerm;
+    }
+
+    public void setCurrentTerm(String currentTerm) {
+        this.currentTerm = currentTerm;
+    }
+
+    public String getAcademicYear() {
+        return academicYear;
+    }
+
+    public void setAcademicYear(String academicYear) {
+        this.academicYear = academicYear;
+    }
+
+    public String getMajor() {
+        return major;
+    }
+
+    public void setMajor(String major) {
+        this.major = major;
+    }
+
+    public String getYearOfStudy() {
+        return yearOfStudy;
+    }
+
+    public void setYearOfStudy(String yearOfStudy) {
+        this.yearOfStudy = yearOfStudy;
     }
 
     public LocalDateTime getCreatedAt() {

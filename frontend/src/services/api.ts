@@ -3,6 +3,7 @@ import {
   AuthResponse,
   LoginRequest,
   Note,
+  ProfileUpdateRequest,
   RegisterRequest,
   StudySession,
   StudySessionStats,
@@ -161,6 +162,40 @@ export const studyMaterialsAPI = {
 
   search: (query: string): Promise<AxiosResponse<any[]>> =>
     api.get(`/study-materials/search?q=${encodeURIComponent(query)}`),
+};
+
+// Quiz API
+export const quizAPI = {
+  generateQuiz: (request: any): Promise<AxiosResponse<any>> =>
+    api.post("/quizzes/generate", request),
+
+  getAll: (): Promise<AxiosResponse<any[]>> => api.get("/quizzes"),
+
+  getById: (id: number): Promise<AxiosResponse<any>> =>
+    api.get(`/quizzes/${id}`),
+
+  delete: (id: number): Promise<AxiosResponse<void>> =>
+    api.delete(`/quizzes/${id}`),
+
+  search: (query: string): Promise<AxiosResponse<any[]>> =>
+    api.get(`/quizzes/search?q=${encodeURIComponent(query)}`),
+};
+
+// Profile API
+export const profileAPI = {
+  updateProfile: (
+    profile: ProfileUpdateRequest
+  ): Promise<AxiosResponse<User>> => api.put("/profile", profile),
+
+  uploadProfilePhoto: (formData: FormData): Promise<AxiosResponse<User>> => {
+    return api.post("/profile/photo", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+  },
+
+  getProfile: (): Promise<AxiosResponse<User>> => api.get("/profile"),
 };
 
 export default api;

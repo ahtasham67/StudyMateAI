@@ -122,7 +122,7 @@ const Dashboard: React.FC = () => {
                   Total Sessions
                 </Typography>
                 <Typography variant="h4">
-                  {stats?.totalSessions || 0}
+                  {stats ? stats.completedSessions : 0}
                 </Typography>
               </Box>
             </Box>
@@ -138,7 +138,7 @@ const Dashboard: React.FC = () => {
                   Total Study Time
                 </Typography>
                 <Typography variant="h4">
-                  {stats ? formatDuration(stats.totalMinutes) : "0m"}
+                  {stats ? formatDuration(stats.totalStudyTime) : "0m"}
                 </Typography>
               </Box>
             </Box>
@@ -154,8 +154,12 @@ const Dashboard: React.FC = () => {
                   Average Session
                 </Typography>
                 <Typography variant="h4">
-                  {stats
-                    ? formatDuration(Math.round(stats.averageDuration))
+                  {stats && stats.completedSessions > 0
+                    ? formatDuration(
+                        Math.round(
+                          stats.totalStudyTime / stats.completedSessions
+                        )
+                      )
                     : "0m"}
                 </Typography>
               </Box>
@@ -169,11 +173,9 @@ const Dashboard: React.FC = () => {
               <Note color="primary" sx={{ mr: 2 }} />
               <Box>
                 <Typography color="text.secondary" gutterBottom>
-                  This Week
+                  Notes Count
                 </Typography>
-                <Typography variant="h4">
-                  {stats?.sessionsThisWeek || 0}
-                </Typography>
+                <Typography variant="h4">{recentNotes.length}</Typography>
               </Box>
             </Box>
           </CardContent>

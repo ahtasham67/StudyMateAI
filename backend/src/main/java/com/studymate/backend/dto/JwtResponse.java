@@ -9,9 +9,16 @@ public class JwtResponse {
     private String firstName;
     private String lastName;
     private String role;
+    private String profilePhotoUrl;
+    private String universityName;
+    private String currentTerm;
+    private String academicYear;
+    private String major;
+    private String yearOfStudy;
 
     public JwtResponse(String accessToken, Long id, String username, String email, String firstName, String lastName,
-            String role) {
+            String role, String profilePhotoUrl, String universityName, String currentTerm, String academicYear,
+            String major, String yearOfStudy) {
         this.token = accessToken;
         this.id = id;
         this.username = username;
@@ -19,6 +26,12 @@ public class JwtResponse {
         this.firstName = firstName;
         this.lastName = lastName;
         this.role = role;
+        this.profilePhotoUrl = profilePhotoUrl;
+        this.universityName = universityName;
+        this.currentTerm = currentTerm;
+        this.academicYear = academicYear;
+        this.major = major;
+        this.yearOfStudy = yearOfStudy;
     }
 
     public String getAccessToken() {
@@ -83,5 +96,53 @@ public class JwtResponse {
 
     public void setRole(String role) {
         this.role = role;
+    }
+
+    public String getProfilePhotoUrl() {
+        return profilePhotoUrl;
+    }
+
+    public void setProfilePhotoUrl(String profilePhotoUrl) {
+        this.profilePhotoUrl = profilePhotoUrl;
+    }
+
+    public String getUniversityName() {
+        return universityName;
+    }
+
+    public void setUniversityName(String universityName) {
+        this.universityName = universityName;
+    }
+
+    public String getCurrentTerm() {
+        return currentTerm;
+    }
+
+    public void setCurrentTerm(String currentTerm) {
+        this.currentTerm = currentTerm;
+    }
+
+    public String getAcademicYear() {
+        return academicYear;
+    }
+
+    public void setAcademicYear(String academicYear) {
+        this.academicYear = academicYear;
+    }
+
+    public String getMajor() {
+        return major;
+    }
+
+    public void setMajor(String major) {
+        this.major = major;
+    }
+
+    public String getYearOfStudy() {
+        return yearOfStudy;
+    }
+
+    public void setYearOfStudy(String yearOfStudy) {
+        this.yearOfStudy = yearOfStudy;
     }
 }

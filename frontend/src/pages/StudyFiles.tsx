@@ -5,6 +5,7 @@ import {
   Delete,
   Download,
   PictureAsPdf,
+  Quiz as QuizIcon,
   Search,
   Slideshow,
 } from "@mui/icons-material";
@@ -22,14 +23,19 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControl,
   IconButton,
+  InputLabel,
   LinearProgress,
+  MenuItem,
   Paper,
+  Select,
   TextField,
   Typography,
 } from "@mui/material";
 import React, { useEffect, useState } from "react";
-import { studyMaterialsAPI } from "../services/api";
+import { quizAPI, studyMaterialsAPI } from "../services/api";
+import { CreateQuizRequest } from "../types";
 
 interface StudyMaterial {
   id: number;
@@ -53,6 +59,19 @@ const StudyFiles: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  // Quiz generation states
+  const [quizDialog, setQuizDialog] = useState(false);
+  const [selectedMaterial, setSelectedMaterial] =
+    useState<StudyMaterial | null>(null);
+  const [quizTitle, setQuizTitle] = useState("");
+  const [quizDescription, setQuizDescription] = useState("");
+  const [numberOfQuestions, setNumberOfQuestions] = useState(10);
+  const [durationMinutes, setDurationMinutes] = useState(30);
+  const [difficulty, setDifficulty] = useState<"EASY" | "MEDIUM" | "HARD">(
+    "MEDIUM"
+  );
+  const [generatingQuiz, setGeneratingQuiz] = useState(false);
 
   useEffect(() => {
     fetchMaterials();
@@ -161,13 +180,79 @@ const StudyFiles: React.FC = () => {
     setDescription("");
   };
 
+  const handleGenerateQuiz = (material: StudyMaterial) => {
+    setSelectedMaterial(material);
+    setQuizTitle(`Quiz: ${material.originalFilename}`);
+    setQuizDescription(`Generated quiz from ${material.originalFilename}`);
+    setQuizDialog(true);
+  };
+
+  const handleQuizGeneration = async () => {
+    if (!selectedMaterial) return;
+
+    try {
+      setGeneratingQuiz(true);
+      setError(null);
+
+      const request: CreateQuizRequest = {
+        title: quizTitle,
+        description: quizDescription,
+        studyMaterialId: selectedMaterial.id,
+        numberOfQuestions,
+        durationMinutes,
+        difficulty,
+      };
+
+      await quizAPI.generateQuiz(request);
+      setSuccess("Quiz generated successfully!");
+      setQuizDialog(false);
+      resetQuizForm();
+    } catch (err: any) {
+      console.error("Quiz generation error:", err);
+
+      // Provide specific error messages based on the error response
+      let errorMessage = "Failed to generate quiz. Please try again.";
+
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+
+      // Handle specific AI service errors
+      if (errorMessage.includes("temporarily unavailable")) {
+        errorMessage =
+          "🤖 AI service is temporarily busy. Please try again in a few minutes.";
+      } else if (errorMessage.includes("rate limit")) {
+        errorMessage =
+          "⏱️ Too many requests. Please wait a moment before trying again.";
+      } else if (errorMessage.includes("API key")) {
+        errorMessage =
+          "🔑 AI service configuration issue. Please contact support.";
+      }
+
+      setError(errorMessage);
+    } finally {
+      setGeneratingQuiz(false);
+    }
+  };
+
+  const resetQuizForm = () => {
+    setSelectedMaterial(null);
+    setQuizTitle("");
+    setQuizDescription("");
+    setNumberOfQuestions(10);
+    setDurationMinutes(30);
+    setDifficulty("MEDIUM");
+  };
+
   const filteredMaterials = materials.filter(
     (material) =>
       material.originalFilename
         ?.toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      material.subject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      material.description?.toLowerCase().includes(searchTerm.toLowerCase())
+        ?.includes(searchTerm.toLowerCase()) ||
+      material.subject?.toLowerCase()?.includes(searchTerm.toLowerCase()) ||
+      material.description?.toLowerCase()?.includes(searchTerm.toLowerCase())
   );
 
   const formatFileSize = (bytes: number): string => {
@@ -319,6 +404,14 @@ const StudyFiles: React.FC = () => {
                     >
                       Download
                     </Button>
+                    <Button
+                      size="small"
+                      startIcon={<QuizIcon />}
+                      onClick={() => handleGenerateQuiz(material)}
+                      color="primary"
+                    >
+                      Generate Quiz
+                    </Button>
                     <IconButton
                       size="small"
                       color="error"
@@ -421,6 +514,133 @@ const StudyFiles: React.FC = () => {
             disabled={!selectedFile || uploading}
           >
             Upload
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Quiz Generation Dialog */}
+      <Dialog
+        open={quizDialog}
+        onClose={() => setQuizDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          Generate Quiz
+          <IconButton
+            onClick={() => setQuizDialog(false)}
+            sx={{ position: "absolute", right: 8, top: 8 }}
+          >
+            <Close />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent sx={{ pt: 2 }}>
+          <TextField
+            label="Quiz Title"
+            variant="outlined"
+            fullWidth
+            value={quizTitle}
+            onChange={(e) => setQuizTitle(e.target.value)}
+            sx={{ mb: 2 }}
+            required
+          />
+
+          <TextField
+            label="Description (Optional)"
+            variant="outlined"
+            fullWidth
+            multiline
+            rows={3}
+            value={quizDescription}
+            onChange={(e) => setQuizDescription(e.target.value)}
+            sx={{ mb: 2 }}
+            placeholder="Brief description of the quiz..."
+          />
+
+          <TextField
+            label="Number of Questions"
+            variant="outlined"
+            fullWidth
+            type="number"
+            value={numberOfQuestions}
+            onChange={(e) =>
+              setNumberOfQuestions(parseInt(e.target.value) || 1)
+            }
+            sx={{ mb: 2 }}
+            inputProps={{ min: 1, max: 50 }}
+            required
+          />
+
+          <TextField
+            label="Duration (Minutes)"
+            variant="outlined"
+            fullWidth
+            type="number"
+            value={durationMinutes}
+            onChange={(e) => setDurationMinutes(parseInt(e.target.value) || 5)}
+            sx={{ mb: 2 }}
+            inputProps={{ min: 5, max: 180 }}
+            required
+          />
+
+          <FormControl fullWidth sx={{ mb: 2 }}>
+            <InputLabel>Difficulty Level</InputLabel>
+            <Select
+              value={difficulty}
+              label="Difficulty Level"
+              onChange={(e) =>
+                setDifficulty(e.target.value as "EASY" | "MEDIUM" | "HARD")
+              }
+            >
+              <MenuItem value="EASY">Easy</MenuItem>
+              <MenuItem value="MEDIUM">Medium</MenuItem>
+              <MenuItem value="HARD">Hard</MenuItem>
+            </Select>
+          </FormControl>
+
+          {selectedMaterial && (
+            <Box sx={{ mb: 2, p: 2, bgcolor: "grey.100", borderRadius: 1 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Source Material:
+              </Typography>
+              <Typography variant="body2">
+                {selectedMaterial.originalFilename}
+              </Typography>
+              {selectedMaterial.subject && (
+                <Typography variant="body2" color="text.secondary">
+                  Subject: {selectedMaterial.subject}
+                </Typography>
+              )}
+            </Box>
+          )}
+
+          {generatingQuiz && (
+            <Box sx={{ mt: 2 }}>
+              <LinearProgress />
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                Generating quiz questions using AI...
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+
+        <DialogActions>
+          <Button
+            onClick={() => setQuizDialog(false)}
+            disabled={generatingQuiz}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleQuizGeneration}
+            variant="contained"
+            disabled={!quizTitle || !selectedMaterial || generatingQuiz}
+            startIcon={
+              generatingQuiz ? <CircularProgress size={16} /> : <QuizIcon />
+            }
+          >
+            {generatingQuiz ? "Generating..." : "Generate Quiz"}
           </Button>
         </DialogActions>
       </Dialog>

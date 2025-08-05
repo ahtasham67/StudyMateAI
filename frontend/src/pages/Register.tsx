@@ -124,6 +124,12 @@ const Register: React.FC = () => {
         email: response.email,
         firstName: response.firstName,
         lastName: response.lastName,
+        profilePhotoUrl: response.profilePhotoUrl,
+        universityName: response.universityName,
+        currentTerm: response.currentTerm,
+        academicYear: response.academicYear,
+        major: response.major,
+        yearOfStudy: response.yearOfStudy,
         createdAt: new Date().toISOString(),
       };
 

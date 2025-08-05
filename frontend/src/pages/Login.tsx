@@ -48,6 +48,12 @@ const Login: React.FC = () => {
         email: data.email,
         firstName: data.firstName,
         lastName: data.lastName,
+        profilePhotoUrl: data.profilePhotoUrl,
+        universityName: data.universityName,
+        currentTerm: data.currentTerm,
+        academicYear: data.academicYear,
+        major: data.major,
+        yearOfStudy: data.yearOfStudy,
         createdAt: new Date().toISOString(),
       };
       login(data.accessToken, user);

@@ -57,7 +57,13 @@ public class AuthController {
                 userDetails.getEmail(),
                 userDetails.getFirstName(),
                 userDetails.getLastName(),
-                userDetails.getRole().name()));
+                userDetails.getRole().name(),
+                userDetails.getProfilePhotoUrl(),
+                userDetails.getUniversityName(),
+                userDetails.getCurrentTerm(),
+                userDetails.getAcademicYear(),
+                userDetails.getMajor(),
+                userDetails.getYearOfStudy()));
     }
 
     @PostMapping("/signup")

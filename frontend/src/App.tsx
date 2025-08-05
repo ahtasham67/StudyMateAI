@@ -12,6 +12,9 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import Notes from "./pages/Notes";
+import Profile from "./pages/Profile";
+import QuizTaking from "./pages/QuizTaking";
+import Quizzes from "./pages/Quizzes";
 import Register from "./pages/Register";
 import StudyFiles from "./pages/StudyFiles";
 import StudySessions from "./pages/StudySessions";
@@ -70,6 +73,18 @@ function AppContent() {
               <Route
                 path="/study-materials"
                 element={user ? <StudyFiles /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/quizzes"
+                element={user ? <Quizzes /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/quiz/:id"
+                element={user ? <QuizTaking /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/profile"
+                element={user ? <Profile /> : <Navigate to="/login" />}
               />
               <Route
                 path="/"
