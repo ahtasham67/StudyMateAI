@@ -37,6 +37,65 @@ export interface Note {
   updatedAt: string;
 }
 
+export interface DiscussionThread {
+  id: number;
+  title: string;
+  content: string;
+  course: string;
+  topic: string;
+  authorName: string;
+  isPinned: boolean;
+  isLocked: boolean;
+  viewCount: number;
+  replyCount: number;
+  createdAt: string;
+  lastActivityAt: string;
+  aiGeneratedSummary?: string;
+  knowledgeScore?: number;
+  knowledgeEntities?: KnowledgeEntity[];
+}
+
+export interface KnowledgeEntity {
+  id: number;
+  name: string;
+  entityType: string;
+  description: string;
+  confidenceScore: number;
+  frequencyCount: number;
+  createdAt: string;
+  relatedEntityNames: string[];
+  relatedThreadCount: number;
+}
+
+export interface KnowledgeSummary {
+  aiGeneratedSummary: string;
+  knowledgeScore: number;
+  keyEntities: KnowledgeEntity[];
+  relatedThreads: DiscussionThread[];
+  suggestedTopics: string[];
+}
+
+export interface ThreadReply {
+  id: number;
+  content: string;
+  authorName: string;
+  parentReplyId?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateThreadRequest {
+  title: string;
+  content: string;
+  course: string;
+  topic: string;
+}
+
+export interface CreateReplyRequest {
+  content: string;
+  parentReplyId?: number;
+}
+
 export interface AuthContextType {
   user: User | null;
   token: string | null;
@@ -140,4 +199,26 @@ export interface CreateQuizRequest {
   numberOfQuestions: number;
   durationMinutes: number;
   difficulty: "EASY" | "MEDIUM" | "HARD";
+}
+
+// API Response Types
+export interface ApiResponse {
+  success: boolean;
+  error?: string;
+  [key: string]: any;
+}
+
+export interface CoursesResponse extends ApiResponse {
+  courses: string[];
+}
+
+export interface TopicsResponse extends ApiResponse {
+  topics: string[];
+}
+
+export interface ThreadsResponse extends ApiResponse {
+  threads: DiscussionThread[];
+  totalElements: number;
+  totalPages: number;
+  currentPage: number;
 }

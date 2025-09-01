@@ -72,13 +72,23 @@ const Login: React.FC = () => {
     <Container component="main" maxWidth="sm">
       <Box
         sx={{
-          marginTop: 8,
+          marginTop: 4,
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
         }}
       >
-        <Paper elevation={3} sx={{ padding: 4, width: "100%" }}>
+        <Paper
+          elevation={0}
+          sx={{
+            padding: 6,
+            width: "100%",
+            background: "linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%)",
+            border: "1px solid rgba(187, 134, 252, 0.2)",
+            borderRadius: "24px",
+            backdropFilter: "blur(20px)",
+          }}
+        >
           <Box
             sx={{
               display: "flex",
@@ -86,16 +96,64 @@ const Login: React.FC = () => {
               alignItems: "center",
             }}
           >
-            <School sx={{ fontSize: 40, color: "primary.main", mb: 2 }} />
-            <Typography component="h1" variant="h4" gutterBottom>
+            <Box
+              sx={{
+                background: "linear-gradient(45deg, #bb86fc, #03dac6)",
+                borderRadius: "50%",
+                p: 2,
+                mb: 3,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <School sx={{ fontSize: 40, color: "white" }} />
+            </Box>
+
+            <Typography
+              component="h1"
+              variant="h4"
+              gutterBottom
+              sx={{
+                background: "linear-gradient(45deg, #bb86fc, #03dac6)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                fontWeight: 700,
+                mb: 1,
+              }}
+            >
               StudyMateAI
             </Typography>
-            <Typography component="h2" variant="h5" gutterBottom>
-              Sign In
+            <Typography
+              component="h2"
+              variant="h5"
+              gutterBottom
+              sx={{ color: "text.primary", fontWeight: 600 }}
+            >
+              Welcome Back
+            </Typography>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ mb: 3, textAlign: "center" }}
+            >
+              Sign in to access your personalized learning experience
             </Typography>
 
             {error && (
-              <Alert severity="error" sx={{ width: "100%", mb: 2 }}>
+              <Alert
+                severity="error"
+                sx={{
+                  width: "100%",
+                  mb: 3,
+                  background: "rgba(244, 67, 54, 0.1)",
+                  border: "1px solid rgba(244, 67, 54, 0.3)",
+                  borderRadius: "12px",
+                  "& .MuiAlert-icon": {
+                    color: "#f44336",
+                  },
+                }}
+              >
                 {error}
               </Alert>
             )}
@@ -117,6 +175,23 @@ const Login: React.FC = () => {
                 value={formData.usernameOrEmail}
                 onChange={handleChange}
                 disabled={loading}
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: "12px",
+                    "& fieldset": {
+                      borderColor: "rgba(187, 134, 252, 0.3)",
+                    },
+                    "&:hover fieldset": {
+                      borderColor: "rgba(187, 134, 252, 0.5)",
+                    },
+                    "&.Mui-focused fieldset": {
+                      borderColor: "#bb86fc",
+                    },
+                  },
+                  "& .MuiInputLabel-root.Mui-focused": {
+                    color: "#bb86fc",
+                  },
+                }}
               />
               <TextField
                 margin="normal"
@@ -130,18 +205,72 @@ const Login: React.FC = () => {
                 value={formData.password}
                 onChange={handleChange}
                 disabled={loading}
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: "12px",
+                    "& fieldset": {
+                      borderColor: "rgba(187, 134, 252, 0.3)",
+                    },
+                    "&:hover fieldset": {
+                      borderColor: "rgba(187, 134, 252, 0.5)",
+                    },
+                    "&.Mui-focused fieldset": {
+                      borderColor: "#bb86fc",
+                    },
+                  },
+                  "& .MuiInputLabel-root.Mui-focused": {
+                    color: "#bb86fc",
+                  },
+                }}
               />
               <Button
                 type="submit"
                 fullWidth
                 variant="contained"
-                sx={{ mt: 3, mb: 2 }}
+                sx={{
+                  mt: 4,
+                  mb: 3,
+                  py: 1.5,
+                  borderRadius: "12px",
+                  background: "linear-gradient(45deg, #bb86fc, #03dac6)",
+                  fontSize: "1.1rem",
+                  fontWeight: 600,
+                  textTransform: "none",
+                  boxShadow: "0 4px 20px 0 rgba(187, 134, 252, 0.3)",
+                  "&:hover": {
+                    background: "linear-gradient(45deg, #d7b3ff, #5ce6d3)",
+                    boxShadow: "0 6px 25px 0 rgba(187, 134, 252, 0.4)",
+                    transform: "translateY(-2px)",
+                  },
+                  "&:disabled": {
+                    background: "rgba(187, 134, 252, 0.3)",
+                    color: "rgba(255, 255, 255, 0.5)",
+                  },
+                  transition: "all 0.3s ease",
+                }}
                 disabled={loading}
               >
-                {loading ? <CircularProgress size={24} /> : "Sign In"}
+                {loading ? (
+                  <CircularProgress size={24} color="inherit" />
+                ) : (
+                  "Sign In"
+                )}
               </Button>
               <Box textAlign="center">
-                <Link component={RouterLink} to="/register" variant="body2">
+                <Link
+                  component={RouterLink}
+                  to="/register"
+                  variant="body2"
+                  sx={{
+                    color: "#bb86fc",
+                    textDecoration: "none",
+                    fontWeight: 500,
+                    "&:hover": {
+                      color: "#03dac6",
+                      textDecoration: "underline",
+                    },
+                  }}
+                >
                   Don't have an account? Sign Up
                 </Link>
               </Box>

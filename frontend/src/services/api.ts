@@ -1,12 +1,21 @@
 import axios, { AxiosResponse } from "axios";
 import {
   AuthResponse,
+  CoursesResponse,
+  CreateReplyRequest,
+  CreateThreadRequest,
+  DiscussionThread,
+  KnowledgeEntity,
+  KnowledgeSummary,
   LoginRequest,
   Note,
   ProfileUpdateRequest,
   RegisterRequest,
   StudySession,
   StudySessionStats,
+  ThreadReply,
+  ThreadsResponse,
+  TopicsResponse,
   User,
 } from "../types";
 
@@ -196,6 +205,212 @@ export const profileAPI = {
   },
 
   getProfile: (): Promise<AxiosResponse<User>> => api.get("/profile"),
+};
+
+// Discussion Threads API
+export const discussionAPI = {
+  // Thread operations
+  getAllThreads: (
+    page = 0,
+    size = 10,
+    sortBy = "lastActivityAt",
+    sortDirection = "desc"
+  ): Promise<AxiosResponse<ThreadsResponse>> =>
+    api.get(
+      `/discussions/threads?page=${page}&size=${size}&sortBy=${sortBy}&sortDirection=${sortDirection}`
+    ),
+
+  getThreadById: (id: number): Promise<AxiosResponse<DiscussionThread>> =>
+    api.get(`/discussions/threads/${id}`),
+
+  getThreadsByCourse: (
+    course: string,
+    page = 0,
+    size = 10
+  ): Promise<AxiosResponse<ThreadsResponse>> =>
+    api.get(
+      `/discussions/threads/course/${encodeURIComponent(
+        course
+      )}?page=${page}&size=${size}`
+    ),
+
+  getThreadsByTopic: (
+    topic: string,
+    page = 0,
+    size = 10
+  ): Promise<AxiosResponse<ThreadsResponse>> =>
+    api.get(
+      `/discussions/threads/topic/${encodeURIComponent(
+        topic
+      )}?page=${page}&size=${size}`
+    ),
+
+  getThreadsByCourseAndTopic: (
+    course: string,
+    topic: string,
+    page = 0,
+    size = 10
+  ): Promise<AxiosResponse<ThreadsResponse>> =>
+    api.get(
+      `/discussions/threads/course/${encodeURIComponent(
+        course
+      )}/topic/${encodeURIComponent(topic)}?page=${page}&size=${size}`
+    ),
+
+  searchThreads: (
+    query: string,
+    course?: string,
+    page = 0,
+    size = 10
+  ): Promise<AxiosResponse<ThreadsResponse>> => {
+    const params = new URLSearchParams({
+      q: query,
+      page: page.toString(),
+      size: size.toString(),
+    });
+    if (course) params.append("course", course);
+    return api.get(`/discussions/threads/search?${params}`);
+  },
+
+  searchThreadsEnhanced: (
+    query: string,
+    course?: string,
+    page = 0,
+    size = 10
+  ): Promise<AxiosResponse<ThreadsResponse>> => {
+    const params = new URLSearchParams({
+      q: query,
+      page: page.toString(),
+      size: size.toString(),
+    });
+    if (course) params.append("course", course);
+    return api.get(`/discussions/threads/search/enhanced?${params}`);
+  },
+
+  getPinnedThreads: (
+    page = 0,
+    size = 10
+  ): Promise<AxiosResponse<ThreadsResponse>> =>
+    api.get(`/discussions/threads/pinned?page=${page}&size=${size}`),
+
+  getRecentActivityThreads: (
+    page = 0,
+    size = 5
+  ): Promise<AxiosResponse<ThreadsResponse>> =>
+    api.get(`/discussions/threads/recent?page=${page}&size=${size}`),
+
+  createThread: (
+    threadData: CreateThreadRequest
+  ): Promise<AxiosResponse<DiscussionThread>> =>
+    api.post("/discussions/threads", threadData),
+
+  deleteThread: (id: number): Promise<AxiosResponse<void>> =>
+    api.delete(`/discussions/threads/${id}`),
+
+  // Reply operations
+  getRepliesByThread: (
+    threadId: number,
+    page = 0,
+    size = 20
+  ): Promise<
+    AxiosResponse<{
+      content: ThreadReply[];
+      totalElements: number;
+      totalPages: number;
+    }>
+  > =>
+    api.get(
+      `/discussions/threads/${threadId}/replies?page=${page}&size=${size}`
+    ),
+
+  createReply: (
+    threadId: number,
+    replyData: CreateReplyRequest
+  ): Promise<AxiosResponse<ThreadReply>> =>
+    api.post(`/discussions/threads/${threadId}/replies`, replyData),
+
+  deleteReply: (id: number): Promise<AxiosResponse<void>> =>
+    api.delete(`/discussions/replies/${id}`),
+
+  // Moderation operations
+  pinThread: (id: number): Promise<AxiosResponse<void>> =>
+    api.post(`/discussions/threads/${id}/pin`),
+
+  lockThread: (id: number): Promise<AxiosResponse<void>> =>
+    api.post(`/discussions/threads/${id}/lock`),
+
+  // Metadata operations
+  getAllCourses: (): Promise<AxiosResponse<CoursesResponse>> =>
+    api.get("/discussions/courses"),
+
+  getTopicsByCourse: (course: string): Promise<AxiosResponse<TopicsResponse>> =>
+    api.get(`/discussions/courses/${encodeURIComponent(course)}/topics`),
+};
+
+// Knowledge Graph API
+export const knowledgeAPI = {
+  // Get knowledge summary for a thread
+  getThreadKnowledgeSummary: (
+    threadId: number
+  ): Promise<AxiosResponse<KnowledgeSummary>> =>
+    api.get(`/knowledge/threads/${threadId}/summary`),
+
+  // Search knowledge entities
+  searchEntities: (
+    query: string,
+    page = 0,
+    size = 20
+  ): Promise<
+    AxiosResponse<{
+      content: KnowledgeEntity[];
+      totalElements: number;
+      totalPages: number;
+    }>
+  > =>
+    api.get(
+      `/knowledge/entities/search?query=${encodeURIComponent(
+        query
+      )}&page=${page}&size=${size}`
+    ),
+
+  // Get popular entities
+  getPopularEntities: (
+    page = 0,
+    size = 20
+  ): Promise<
+    AxiosResponse<{
+      content: KnowledgeEntity[];
+      totalElements: number;
+      totalPages: number;
+    }>
+  > => api.get(`/knowledge/entities/popular?page=${page}&size=${size}`),
+
+  // Get entities by type
+  getEntitiesByType: (
+    entityType: string
+  ): Promise<AxiosResponse<KnowledgeEntity[]>> =>
+    api.get(`/knowledge/entities/type/${encodeURIComponent(entityType)}`),
+
+  // Get related entities
+  getRelatedEntities: (
+    entityId: number
+  ): Promise<AxiosResponse<KnowledgeEntity[]>> =>
+    api.get(`/knowledge/entities/${entityId}/related`),
+
+  // Get entity details
+  getEntityById: (entityId: number): Promise<AxiosResponse<KnowledgeEntity>> =>
+    api.get(`/knowledge/entities/${entityId}`),
+
+  // Get knowledge graph statistics
+  getKnowledgeStats: (): Promise<
+    AxiosResponse<{ totalEntities: number; topEntities: any[] }>
+  > => api.get("/knowledge/stats"),
+
+  // Generate AI summary for a topic/query
+  generateTopicSummary: (
+    query: string
+  ): Promise<AxiosResponse<{ summary: string }>> =>
+    api.get(`/knowledge/summary?query=${encodeURIComponent(query)}`),
 };
 
 export default api;

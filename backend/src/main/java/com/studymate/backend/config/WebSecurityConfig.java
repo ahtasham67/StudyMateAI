@@ -65,7 +65,7 @@ public class WebSecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authz -> authz
                         .requestMatchers("/auth/**").permitAll()
-                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/discussions/**").permitAll()
                         .requestMatchers("/public/**").permitAll()
                         .requestMatchers("/profile/photo/**").permitAll()
                         .anyRequest().authenticated());

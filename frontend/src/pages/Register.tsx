@@ -30,6 +30,25 @@ const Register: React.FC = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
 
+  // Shared textfield styling
+  const textFieldSx = {
+    "& .MuiOutlinedInput-root": {
+      borderRadius: "12px",
+      "& fieldset": {
+        borderColor: "rgba(187, 134, 252, 0.3)",
+      },
+      "&:hover fieldset": {
+        borderColor: "rgba(187, 134, 252, 0.5)",
+      },
+      "&.Mui-focused fieldset": {
+        borderColor: "#bb86fc",
+      },
+    },
+    "& .MuiInputLabel-root.Mui-focused": {
+      color: "#bb86fc",
+    },
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     if (name === "confirmPassword") {
@@ -172,7 +191,17 @@ const Register: React.FC = () => {
           alignItems: "center",
         }}
       >
-        <Paper elevation={3} sx={{ padding: 4, width: "100%" }}>
+        <Paper
+          elevation={0}
+          sx={{
+            padding: 6,
+            width: "100%",
+            background: "linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%)",
+            border: "1px solid rgba(187, 134, 252, 0.2)",
+            borderRadius: "24px",
+            backdropFilter: "blur(20px)",
+          }}
+        >
           <Box
             sx={{
               display: "flex",
@@ -180,16 +209,64 @@ const Register: React.FC = () => {
               alignItems: "center",
             }}
           >
-            <School sx={{ fontSize: 40, color: "primary.main", mb: 2 }} />
-            <Typography component="h1" variant="h4" gutterBottom>
+            <Box
+              sx={{
+                background: "linear-gradient(45deg, #bb86fc, #03dac6)",
+                borderRadius: "50%",
+                p: 2,
+                mb: 3,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <School sx={{ fontSize: 40, color: "white" }} />
+            </Box>
+
+            <Typography
+              component="h1"
+              variant="h4"
+              gutterBottom
+              sx={{
+                background: "linear-gradient(45deg, #bb86fc, #03dac6)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                fontWeight: 700,
+                mb: 1,
+              }}
+            >
               StudyMateAI
             </Typography>
-            <Typography component="h2" variant="h5" gutterBottom>
-              Sign Up
+            <Typography
+              component="h2"
+              variant="h5"
+              gutterBottom
+              sx={{ color: "text.primary", fontWeight: 600 }}
+            >
+              Join StudyMateAI
+            </Typography>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ mb: 3, textAlign: "center" }}
+            >
+              Create your account to start your AI-powered learning journey
             </Typography>
 
             {error && (
-              <Alert severity="error" sx={{ width: "100%", mb: 2 }}>
+              <Alert
+                severity="error"
+                sx={{
+                  width: "100%",
+                  mb: 3,
+                  background: "rgba(244, 67, 54, 0.1)",
+                  border: "1px solid rgba(244, 67, 54, 0.3)",
+                  borderRadius: "12px",
+                  "& .MuiAlert-icon": {
+                    color: "#f44336",
+                  },
+                }}
+              >
                 {error}
               </Alert>
             )}
@@ -213,6 +290,7 @@ const Register: React.FC = () => {
                     onChange={handleChange}
                     disabled={loading}
                     inputProps={{ maxLength: 50 }}
+                    sx={textFieldSx}
                   />
                   <TextField
                     required
@@ -225,6 +303,7 @@ const Register: React.FC = () => {
                     onChange={handleChange}
                     disabled={loading}
                     inputProps={{ maxLength: 50 }}
+                    sx={textFieldSx}
                   />
                 </Box>
                 <TextField
@@ -239,6 +318,7 @@ const Register: React.FC = () => {
                   disabled={loading}
                   inputProps={{ minLength: 3, maxLength: 20 }}
                   helperText="Username must be between 3 and 20 characters"
+                  sx={textFieldSx}
                 />
                 <TextField
                   required
@@ -253,6 +333,7 @@ const Register: React.FC = () => {
                   disabled={loading}
                   inputProps={{ maxLength: 50 }}
                   helperText="Must be a valid email address"
+                  sx={textFieldSx}
                 />
                 <TextField
                   required
@@ -267,6 +348,7 @@ const Register: React.FC = () => {
                   disabled={loading}
                   inputProps={{ minLength: 6, maxLength: 40 }}
                   helperText="Password must be between 6 and 40 characters"
+                  sx={textFieldSx}
                 />
                 <TextField
                   required
@@ -278,19 +360,57 @@ const Register: React.FC = () => {
                   value={confirmPassword}
                   onChange={handleChange}
                   disabled={loading}
+                  sx={textFieldSx}
                 />
               </Box>
               <Button
                 type="submit"
                 fullWidth
                 variant="contained"
-                sx={{ mt: 3, mb: 2 }}
+                sx={{
+                  mt: 4,
+                  mb: 3,
+                  py: 1.5,
+                  borderRadius: "12px",
+                  background: "linear-gradient(45deg, #bb86fc, #03dac6)",
+                  fontSize: "1.1rem",
+                  fontWeight: 600,
+                  textTransform: "none",
+                  boxShadow: "0 4px 20px 0 rgba(187, 134, 252, 0.3)",
+                  "&:hover": {
+                    background: "linear-gradient(45deg, #d7b3ff, #5ce6d3)",
+                    boxShadow: "0 6px 25px 0 rgba(187, 134, 252, 0.4)",
+                    transform: "translateY(-2px)",
+                  },
+                  "&:disabled": {
+                    background: "rgba(187, 134, 252, 0.3)",
+                    color: "rgba(255, 255, 255, 0.5)",
+                  },
+                  transition: "all 0.3s ease",
+                }}
                 disabled={loading}
               >
-                {loading ? <CircularProgress size={24} /> : "Sign Up"}
+                {loading ? (
+                  <CircularProgress size={24} color="inherit" />
+                ) : (
+                  "Create Account"
+                )}
               </Button>
               <Box textAlign="center">
-                <Link component={RouterLink} to="/login" variant="body2">
+                <Link
+                  component={RouterLink}
+                  to="/login"
+                  variant="body2"
+                  sx={{
+                    color: "#bb86fc",
+                    textDecoration: "none",
+                    fontWeight: 500,
+                    "&:hover": {
+                      color: "#03dac6",
+                      textDecoration: "underline",
+                    },
+                  }}
+                >
                   Already have an account? Sign In
                 </Link>
               </Box>
