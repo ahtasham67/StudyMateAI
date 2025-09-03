@@ -13,20 +13,48 @@ import com.studymate.backend.model.StudyMaterial;
 @Repository
 public interface StudyMaterialRepository extends JpaRepository<StudyMaterial, Long> {
 
-    List<StudyMaterial> findByUserIdOrderByCreatedAtDesc(Long userId);
+        List<StudyMaterial> findByUserIdOrderByCreatedAtDesc(Long userId);
 
-    Optional<StudyMaterial> findByIdAndUserId(Long id, Long userId);
+        Optional<StudyMaterial> findByIdAndUserId(Long id, Long userId);
 
-    @Query("SELECT sm FROM StudyMaterial sm WHERE sm.userId = :userId AND " +
-            "(LOWER(sm.fileName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-            "LOWER(sm.originalName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-            "LOWER(sm.subject) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-            "LOWER(sm.description) LIKE LOWER(CONCAT('%', :query, '%')))")
-    List<StudyMaterial> searchByUserIdAndQuery(@Param("userId") Long userId, @Param("query") String query);
+        @Query("SELECT sm FROM StudyMaterial sm WHERE sm.userId = :userId AND " +
+                        "(LOWER(sm.fileName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+                        "LOWER(sm.originalName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+                        "LOWER(sm.subject) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+                        "LOWER(sm.description) LIKE LOWER(CONCAT('%', :query, '%')))")
+        List<StudyMaterial> searchByUserIdAndQuery(@Param("userId") Long userId, @Param("query") String query);
 
-    List<StudyMaterial> findByUserIdAndSubjectContainingIgnoreCase(Long userId, String subject);
+        List<StudyMaterial> findByUserIdAndSubjectContainingIgnoreCase(Long userId, String subject);
 
-    List<StudyMaterial> findByUserIdAndFileType(Long userId, StudyMaterial.FileType fileType);
+        List<StudyMaterial> findByUserIdAndFileType(Long userId, StudyMaterial.FileType fileType);
 
-    long countByUserId(Long userId);
+        long countByUserId(Long userId);
+
+        // Folder-related queries
+        List<StudyMaterial> findByUserIdAndFolderIsNullOrderByCreatedAtDesc(Long userId);
+
+        List<StudyMaterial> findByUserIdAndFolderIdOrderByCreatedAtDesc(Long userId, Long folderId);
+
+        List<StudyMaterial> findByFolderIdOrderByCreatedAtDesc(Long folderId);
+
+        long countByFolderId(Long folderId);
+
+        long countByUserIdAndFolderId(Long userId, Long folderId);
+
+        long countByUserIdAndFolderIsNull(Long userId);
+
+        @Query("SELECT sm FROM StudyMaterial sm WHERE sm.userId = :userId AND sm.folder.id = :folderId AND " +
+                        "(LOWER(sm.fileName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+                        "LOWER(sm.originalName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+                        "LOWER(sm.subject) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+                        "LOWER(sm.description) LIKE LOWER(CONCAT('%', :query, '%')))")
+        List<StudyMaterial> searchByUserIdAndFolderIdAndQuery(@Param("userId") Long userId,
+                        @Param("folderId") Long folderId, @Param("query") String query);
+
+        @Query("SELECT sm FROM StudyMaterial sm WHERE sm.userId = :userId AND sm.folder IS NULL AND " +
+                        "(LOWER(sm.fileName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+                        "LOWER(sm.originalName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+                        "LOWER(sm.subject) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+                        "LOWER(sm.description) LIKE LOWER(CONCAT('%', :query, '%')))")
+        List<StudyMaterial> searchByUserIdInRootAndQuery(@Param("userId") Long userId, @Param("query") String query);
 }

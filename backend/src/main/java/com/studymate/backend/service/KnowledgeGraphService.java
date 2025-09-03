@@ -25,6 +25,9 @@ public class KnowledgeGraphService {
     @Autowired
     private KnowledgeEntityRepository entityRepository;
 
+    @Autowired(required = false) // Make it optional in case CoreNLP fails to load
+    private NLPService nlpService;
+
     // Pre-defined knowledge patterns for different subjects
     private static final Map<String, List<String>> DOMAIN_KEYWORDS = Map.of(
             "COMPUTER_SCIENCE",
@@ -43,26 +46,122 @@ public class KnowledgeGraphService {
                     "ecosystem", "species"));
 
     /**
-     * Extract knowledge entities from thread content
+     * Extract knowledge entities from thread content and its replies
      */
     public Set<KnowledgeEntity> extractEntitiesFromThread(DiscussionThread thread) {
         Set<KnowledgeEntity> entities = new HashSet<>();
-        String content = thread.getTitle() + " " + thread.getContent();
 
-        // Extract technical terms and concepts
-        entities.addAll(extractTechnicalTerms(content, thread.getCourse()));
+        // Combine thread content with all reply content
+        StringBuilder allContent = new StringBuilder();
+        allContent.append(thread.getTitle()).append(" ").append(thread.getContent());
 
-        // Extract named entities (proper nouns, concepts)
-        entities.addAll(extractNamedEntities(content));
+        // Add content from all replies
+        if (thread.getReplies() != null && !thread.getReplies().isEmpty()) {
+            for (var reply : thread.getReplies()) {
+                if (reply.getContent() != null && !reply.getIsDeleted()) {
+                    allContent.append(" ").append(reply.getContent());
+                }
+            }
+        }
 
-        // Extract course-specific concepts
-        entities.addAll(extractCourseSpecificConcepts(content, thread.getCourse()));
+        String combinedContent = allContent.toString();
+
+        // Use Stanford CoreNLP if available, otherwise fall back to simpler methods
+        if (nlpService != null) {
+            try {
+                entities.addAll(nlpService.extractNamedEntities(combinedContent, thread.getCourse()));
+
+                // Extract key phrases using NLP
+                Set<String> keyPhrases = nlpService.extractKeyPhrases(combinedContent);
+                for (String phrase : keyPhrases) {
+                    System.out.println("Extracted key phrase: " + phrase);
+
+                    entities.add(new KnowledgeEntity(phrase, "KEY_PHRASE",
+                            "Key phrase from " + thread.getCourse(), 0.7));
+                }
+            } catch (Exception e) {
+                System.err.println("NLP service failed, falling back to simple extraction: " + e.getMessage());
+                entities.addAll(extractEntitiesSimple(combinedContent, thread.getCourse()));
+            }
+        } else {
+            // Fallback to simple extraction methods
+            entities.addAll(extractEntitiesSimple(combinedContent, thread.getCourse()));
+        }
 
         return entities;
     }
 
     /**
-     * Generate AI summary based on knowledge entities
+     * Simple entity extraction fallback method
+     */
+    private Set<KnowledgeEntity> extractEntitiesSimple(String content, String course) {
+        Set<KnowledgeEntity> entities = new HashSet<>();
+
+        // Extract technical terms and concepts from combined content
+        entities.addAll(extractTechnicalTerms(content, course));
+
+        // Extract named entities (proper nouns, concepts)
+        entities.addAll(extractNamedEntities(content));
+
+        // Extract course-specific concepts
+        entities.addAll(extractCourseSpecificConcepts(content, course));
+
+        return entities;
+    }
+
+    /**
+     * Extract knowledge entities from a single reply
+     */
+    public Set<KnowledgeEntity> extractEntitiesFromReply(String replyContent, String course) {
+        Set<KnowledgeEntity> entities = new HashSet<>();
+
+        if (replyContent == null || replyContent.trim().isEmpty()) {
+            return entities;
+        }
+
+        // Use Stanford CoreNLP if available
+        if (nlpService != null) {
+            try {
+                entities.addAll(nlpService.extractNamedEntities(replyContent, course));
+
+                // Extract key phrases
+                Set<String> keyPhrases = nlpService.extractKeyPhrases(replyContent);
+                for (String phrase : keyPhrases) {
+                    System.out.println("Extracted key phrase: " + phrase);
+                    entities.add(new KnowledgeEntity(phrase, "KEY_PHRASE",
+                            "Key phrase from reply in " + course, 0.6));
+                }
+            } catch (Exception e) {
+                System.err.println("NLP service failed for reply, using simple extraction: " + e.getMessage());
+                entities.addAll(extractEntitiesSimpleFromReply(replyContent, course));
+            }
+        } else {
+            entities.addAll(extractEntitiesSimpleFromReply(replyContent, course));
+        }
+
+        return entities;
+    }
+
+    /**
+     * Simple entity extraction from reply fallback
+     */
+    private Set<KnowledgeEntity> extractEntitiesSimpleFromReply(String replyContent, String course) {
+        Set<KnowledgeEntity> entities = new HashSet<>();
+
+        // Extract technical terms and concepts
+        entities.addAll(extractTechnicalTerms(replyContent, course));
+
+        // Extract named entities (proper nouns, concepts)
+        entities.addAll(extractNamedEntities(replyContent));
+
+        // Extract course-specific concepts
+        entities.addAll(extractCourseSpecificConcepts(replyContent, course));
+
+        return entities;
+    }
+
+    /**
+     * Generate AI summary based on knowledge entities from thread and replies
      */
     public String generateKnowledgeSummary(DiscussionThread thread) {
         Set<KnowledgeEntity> entities = thread.getKnowledgeEntities();
@@ -88,8 +187,40 @@ public class KnowledgeGraphService {
             summary.append(String.join(", ", concepts));
         }
 
-        summary.append("\n\n**Summary:** ");
+        // Add key phrases if available
+        if (entityGroups.containsKey("KEY_PHRASE")) {
+            List<String> keyPhrases = entityGroups.get("KEY_PHRASE").stream()
+                    .sorted((a, b) -> Double.compare(b.getConfidenceScore(), a.getConfidenceScore()))
+                    .limit(2)
+                    .map(KnowledgeEntity::getName)
+                    .collect(Collectors.toList());
+            if (!keyPhrases.isEmpty()) {
+                summary.append(", ").append(String.join(", ", keyPhrases));
+            }
+        }
+
+        summary.append("\n\n**Discussion Summary:** ");
         summary.append(generateBasicSummary(thread));
+
+        // Add sentiment analysis if NLP service is available
+        if (nlpService != null) {
+            try {
+                String sentiment = nlpService.analyzeSentiment(thread.getContent());
+                summary.append("\n\n**Discussion Tone:** ").append(sentiment);
+            } catch (Exception e) {
+                // Ignore sentiment analysis errors
+            }
+        }
+
+        // Add reply insights if there are replies
+        if (thread.getReplies() != null && !thread.getReplies().isEmpty()) {
+            int activeReplies = (int) thread.getReplies().stream()
+                    .filter(reply -> !reply.getIsDeleted())
+                    .count();
+            summary.append("\n\n**Discussion Activity:** ");
+            summary.append("This thread has generated ").append(activeReplies)
+                    .append(" replies, indicating active community engagement on this topic.");
+        }
 
         // Add related knowledge
         summary.append("\n\n**Related Topics:** ");
@@ -100,6 +231,8 @@ public class KnowledgeGraphService {
                     .map(KnowledgeEntity::getName)
                     .collect(Collectors.toList());
             summary.append(String.join(", ", relatedNames));
+        } else {
+            summary.append("No strongly related topics found yet.");
         }
 
         return summary.toString();
@@ -174,6 +307,49 @@ public class KnowledgeGraphService {
 
         // Create entity relationships
         createEntityRelationships(persistedEntities);
+    }
+
+    /**
+     * Process a new reply and update knowledge graph incrementally
+     */
+    @Transactional
+    public void processReplyForKnowledgeGraph(DiscussionThread thread, String replyContent) {
+        // Extract entities from the new reply
+        Set<KnowledgeEntity> replyEntities = extractEntitiesFromReply(replyContent, thread.getCourse());
+
+        if (replyEntities.isEmpty()) {
+            return;
+        }
+
+        // Save or update entities
+        Set<KnowledgeEntity> persistedEntities = new HashSet<>();
+        for (KnowledgeEntity entity : replyEntities) {
+            KnowledgeEntity existingEntity = entityRepository.findByNameIgnoreCase(entity.getName())
+                    .orElse(null);
+
+            if (existingEntity != null) {
+                existingEntity.incrementFrequency();
+                existingEntity.getRelatedThreads().add(thread);
+                persistedEntities.add(entityRepository.save(existingEntity));
+            } else {
+                entity.getRelatedThreads().add(thread);
+                persistedEntities.add(entityRepository.save(entity));
+            }
+        }
+
+        // Add new entities to thread's existing entities
+        thread.getKnowledgeEntities().addAll(persistedEntities);
+
+        // Recalculate knowledge score and summary
+        thread.setKnowledgeScore(calculateKnowledgeScore(thread));
+        thread.setAiGeneratedSummary(generateKnowledgeSummary(thread));
+
+        // Create relationships with existing entities
+        createEntityRelationships(persistedEntities);
+
+        // Create relationships between new entities and existing thread entities
+        Set<KnowledgeEntity> allThreadEntities = new HashSet<>(thread.getKnowledgeEntities());
+        createEntityRelationships(allThreadEntities);
     }
 
     // Private helper methods
@@ -276,7 +452,27 @@ public class KnowledgeGraphService {
 
     private String generateBasicSummary(DiscussionThread thread) {
         String content = thread.getContent();
-        if (content.length() <= 200) {
+
+        // If thread has replies, create a more comprehensive summary
+        if (thread.getReplies() != null && !thread.getReplies().isEmpty()) {
+            StringBuilder combinedContent = new StringBuilder(content);
+
+            // Add key points from replies (limit to first few replies to avoid too much
+            // text)
+            thread.getReplies().stream()
+                    .filter(reply -> !reply.getIsDeleted())
+                    .limit(3) // Only consider first 3 replies for summary
+                    .forEach(reply -> {
+                        if (reply.getContent().length() > 50) { // Only include substantial replies
+                            combinedContent.append(" ").append(reply.getContent().substring(0,
+                                    Math.min(100, reply.getContent().length()))); // First 100 chars
+                        }
+                    });
+
+            content = combinedContent.toString();
+        }
+
+        if (content.length() <= 250) {
             return content;
         }
 
@@ -286,7 +482,7 @@ public class KnowledgeGraphService {
             return sentences[0] + ". " + sentences[1] + ".";
         }
 
-        return content.substring(0, 200) + "...";
+        return content.substring(0, 250) + "...";
     }
 
     private Set<KnowledgeEntity> findRelatedEntities(Set<KnowledgeEntity> entities) {

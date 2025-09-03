@@ -178,6 +178,11 @@ public class DiscussionThreadService {
 
         // Update thread reply count and last activity
         thread.incrementReplyCount();
+
+        // Process the new reply for knowledge graph extraction
+        knowledgeGraphService.processReplyForKnowledgeGraph(thread, request.getContent());
+
+        // Save the updated thread with new knowledge entities
         threadRepository.save(thread);
 
         ReplyResponse replyResponse = convertToReplyResponse(savedReply);

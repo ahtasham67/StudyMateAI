@@ -8,7 +8,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.studymate.backend.model.StudyFolder;
 import com.studymate.backend.model.StudyMaterial;
+import com.studymate.backend.repository.StudyFolderRepository;
 import com.studymate.backend.repository.StudyMaterialRepository;
 
 @Service
@@ -17,9 +19,17 @@ public class StudyMaterialService {
     @Autowired
     private StudyMaterialRepository studyMaterialRepository;
 
+    @Autowired
+    private StudyFolderRepository studyFolderRepository;
+
     private static final long MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
     public StudyMaterial saveFile(MultipartFile file, String subject, String description, Long userId)
+            throws IOException {
+        return saveFile(file, subject, description, null, userId);
+    }
+
+    public StudyMaterial saveFile(MultipartFile file, String subject, String description, Long folderId, Long userId)
             throws IOException {
         // Validate file
         validateFile(file);
@@ -32,6 +42,13 @@ public class StudyMaterialService {
         // Determine file type
         StudyMaterial.FileType fileType = determineFileType(fileExtension);
 
+        // Validate folder ownership if folderId is provided
+        StudyFolder folder = null;
+        if (folderId != null) {
+            folder = studyFolderRepository.findByIdAndUserId(folderId, userId)
+                    .orElseThrow(() -> new IllegalArgumentException("Folder not found or access denied"));
+        }
+
         // Create StudyMaterial entity
         StudyMaterial studyMaterial = new StudyMaterial();
         studyMaterial.setFileName(uniqueFilename);
@@ -42,6 +59,7 @@ public class StudyMaterialService {
         studyMaterial.setSubject(subject != null ? subject : "");
         studyMaterial.setDescription(description != null ? description : "");
         studyMaterial.setUserId(userId);
+        studyMaterial.setFolder(folder);
 
         return studyMaterialRepository.save(studyMaterial);
     }
@@ -77,6 +95,14 @@ public class StudyMaterialService {
 
     public long getUserMaterialCount(Long userId) {
         return studyMaterialRepository.countByUserId(userId);
+    }
+
+    public List<StudyMaterial> getMaterialsInFolder(Long folderId, Long userId) {
+        return studyMaterialRepository.findByUserIdAndFolderIdOrderByCreatedAtDesc(userId, folderId);
+    }
+
+    public List<StudyMaterial> getMaterialsWithoutFolder(Long userId) {
+        return studyMaterialRepository.findByUserIdAndFolderIsNullOrderByCreatedAtDesc(userId);
     }
 
     private void validateFile(MultipartFile file) {

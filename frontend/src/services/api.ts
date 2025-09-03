@@ -173,6 +173,74 @@ export const studyMaterialsAPI = {
     api.get(`/study-materials/search?q=${encodeURIComponent(query)}`),
 };
 
+// Folder API
+export const folderAPI = {
+  getRootFolders: (): Promise<AxiosResponse<any[]>> => api.get("/folders/root"),
+
+  getFolderWithContents: (folderId: number): Promise<AxiosResponse<any>> =>
+    api.get(`/folders/${folderId}`),
+
+  getFolderHierarchy: (folderId: number): Promise<AxiosResponse<any[]>> =>
+    api.get(`/folders/${folderId}/hierarchy`),
+
+  createFolder: (folderData: {
+    name: string;
+    description?: string;
+    parentId?: number | null;
+  }): Promise<AxiosResponse<any>> => api.post("/folders", folderData),
+
+  updateFolder: (
+    folderId: number,
+    folderData: {
+      name: string;
+      description?: string;
+    }
+  ): Promise<AxiosResponse<any>> => api.put(`/folders/${folderId}`, folderData),
+
+  deleteFolder: (folderId: number): Promise<AxiosResponse<void>> =>
+    api.delete(`/folders/${folderId}`),
+
+  moveMaterialToFolder: (
+    materialId: number,
+    folderId?: number | null
+  ): Promise<AxiosResponse<void>> =>
+    api.put(`/folders/materials/${materialId}/move`, null, {
+      params: { folderId },
+    }),
+
+  searchFolders: (query: string): Promise<AxiosResponse<any[]>> =>
+    api.get(`/folders/search?q=${encodeURIComponent(query)}`),
+
+  getMaterialsInFolder: (folderId: number): Promise<AxiosResponse<any[]>> =>
+    api.get(`/study-materials/folder/${folderId}`),
+
+  getUnorganizedMaterials: (): Promise<AxiosResponse<any[]>> =>
+    api.get("/study-materials/unorganized"),
+};
+
+// Chatbot API
+export const chatbotAPI = {
+  generateSummary: (materialId: number): Promise<AxiosResponse<any>> =>
+    api.get(`/chatbot/materials/${materialId}/summary`),
+
+  generateTopics: (materialId: number): Promise<AxiosResponse<any>> =>
+    api.get(`/chatbot/materials/${materialId}/topics`),
+
+  askQuestion: (request: {
+    materialId: number;
+    question: string;
+    conversationHistory?: string;
+    useCachedContent?: boolean;
+    cacheTimestamp?: string;
+  }): Promise<AxiosResponse<any>> =>
+    api.post("/chatbot/materials/question", request),
+
+  loadMaterialContent: (materialId: number): Promise<AxiosResponse<any>> =>
+    api.get(`/chatbot/materials/${materialId}/content`),
+
+  healthCheck: (): Promise<AxiosResponse<any>> => api.get("/chatbot/health"),
+};
+
 // Quiz API
 export const quizAPI = {
   generateQuiz: (request: any): Promise<AxiosResponse<any>> =>

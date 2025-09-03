@@ -20,7 +20,7 @@ import Profile from "./pages/Profile";
 import QuizTaking from "./pages/QuizTaking";
 import Quizzes from "./pages/Quizzes";
 import Register from "./pages/Register";
-import StudyFiles from "./pages/StudyFiles";
+import StudyMaterialsWithFolders from "./pages/StudyMaterialsWithFolders";
 import StudySessions from "./pages/StudySessions";
 import ThreadDetail from "./pages/ThreadDetail";
 
@@ -195,11 +195,17 @@ function AppContent() {
                 path="/study-materials"
                 element={
                   user ? (
-                    <Container maxWidth="lg">
-                      <Box sx={{ py: 4 }}>
-                        <StudyFiles />
-                      </Box>
-                    </Container>
+                    <StudyMaterialsWithFolders />
+                  ) : (
+                    <Navigate to="/login" />
+                  )
+                }
+              />
+              <Route
+                path="/study-materials-folders"
+                element={
+                  user ? (
+                    <StudyMaterialsWithFolders />
                   ) : (
                     <Navigate to="/login" />
                   )

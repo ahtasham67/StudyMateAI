@@ -1,14 +1,14 @@
 import {
+  AccountTree,
   ArrowForward,
   AutoAwesome,
+  Chat,
   CheckCircle,
-  Note,
+  Folder,
   PlayArrow,
   Psychology,
   Quiz,
   Security,
-  Speed,
-  TrendingUp,
 } from "@mui/icons-material";
 import {
   Avatar,
@@ -119,49 +119,49 @@ const HomePage: React.FC = () => {
       delay: 200,
     },
     {
-      icon: <Quiz sx={{ fontSize: 40, color: "white" }} />,
-      title: "Smart Quiz Generation",
+      icon: <Chat sx={{ fontSize: 40, color: "white" }} />,
+      title: "Intelligent Chatbot Integration",
       description:
-        "Generate intelligent quizzes from your study materials using cutting-edge AI technology.",
+        "Chat with your study materials using advanced AI to get instant explanations, summaries, and answers to your questions.",
       delay: 400,
     },
     {
-      icon: <Note sx={{ fontSize: 40, color: "white" }} />,
-      title: "Smart Note Taking",
+      icon: <AccountTree sx={{ fontSize: 40, color: "white" }} />,
+      title: "Knowledge Graph Discussions",
       description:
-        "Organize and manage your notes with AI-powered categorization and search capabilities.",
+        "Engage in structured discussion threads that map concepts and connections for deeper understanding.",
       delay: 600,
     },
     {
-      icon: <TrendingUp sx={{ fontSize: 40, color: "white" }} />,
-      title: "Progress Tracking",
+      icon: <Quiz sx={{ fontSize: 40, color: "white" }} />,
+      title: "Smart Quiz Generation",
       description:
-        "Monitor your learning progress with detailed analytics and performance insights.",
+        "Generate intelligent quizzes from your study materials using cutting-edge AI technology with customizable difficulty levels.",
       delay: 800,
+    },
+    {
+      icon: <Folder sx={{ fontSize: 40, color: "white" }} />,
+      title: "Organized Material Management",
+      description:
+        "Organize your study materials in folders with grid and list views, supporting PDF and PowerPoint files.",
+      delay: 1000,
     },
     {
       icon: <Security sx={{ fontSize: 40, color: "white" }} />,
       title: "Secure & Private",
       description:
-        "Your data is protected with enterprise-grade security and privacy measures.",
-      delay: 1000,
-    },
-    {
-      icon: <Speed sx={{ fontSize: 40, color: "white" }} />,
-      title: "Lightning Fast",
-      description:
-        "Experience blazing-fast performance with optimized algorithms and modern technology.",
+        "Your data is protected with enterprise-grade security, JWT authentication, and privacy measures.",
       delay: 1200,
     },
   ];
 
   const benefits = [
-    "Personalized learning paths tailored to your goals",
-    "AI-generated quizzes that adapt to your knowledge level",
-    "Smart study session management with time tracking",
-    "Collaborative features for group study sessions",
+    "AI-powered chatbot for interactive study material discussions",
+    "Knowledge graph-based discussion threads for concept mapping",
+    "Smart quiz generation with customizable difficulty and duration",
+    "Organized folder structure with grid and list view options",
+    "Secure material management system with enterprise-grade protection",
     "Cross-platform synchronization across all devices",
-    "Advanced analytics to optimize your study efficiency",
   ];
 
   return (

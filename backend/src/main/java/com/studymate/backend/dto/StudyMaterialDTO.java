@@ -2,7 +2,7 @@ package com.studymate.backend.dto;
 
 import java.time.LocalDateTime;
 
-public class StudyMaterialResponse {
+public class StudyMaterialDTO {
     private Long id;
     private String fileName;
     private String originalName;
@@ -11,12 +11,33 @@ public class StudyMaterialResponse {
     private String subject;
     private String description;
     private String category;
+    private Long folderId;
+    private String folderName;
+    private String folderPath;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private StudyFolderDTO folder;
 
     // Constructors
-    public StudyMaterialResponse() {
+    public StudyMaterialDTO() {
+    }
+
+    public StudyMaterialDTO(Long id, String fileName, String originalName, String fileType,
+            Long fileSize, String subject, String description, String category,
+            Long folderId, String folderName, String folderPath,
+            LocalDateTime createdAt, LocalDateTime updatedAt) {
+        this.id = id;
+        this.fileName = fileName;
+        this.originalName = originalName;
+        this.fileType = fileType;
+        this.fileSize = fileSize;
+        this.subject = subject;
+        this.description = description;
+        this.category = category;
+        this.folderId = folderId;
+        this.folderName = folderName;
+        this.folderPath = folderPath;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
     }
 
     // Getters and Setters
@@ -84,6 +105,30 @@ public class StudyMaterialResponse {
         this.category = category;
     }
 
+    public Long getFolderId() {
+        return folderId;
+    }
+
+    public void setFolderId(Long folderId) {
+        this.folderId = folderId;
+    }
+
+    public String getFolderName() {
+        return folderName;
+    }
+
+    public void setFolderName(String folderName) {
+        this.folderName = folderName;
+    }
+
+    public String getFolderPath() {
+        return folderPath;
+    }
+
+    public void setFolderPath(String folderPath) {
+        this.folderPath = folderPath;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
@@ -100,11 +145,17 @@ public class StudyMaterialResponse {
         this.updatedAt = updatedAt;
     }
 
-    public StudyFolderDTO getFolder() {
-        return folder;
-    }
-
-    public void setFolder(StudyFolderDTO folder) {
-        this.folder = folder;
+    @Override
+    public String toString() {
+        return "StudyMaterialDTO{" +
+                "id=" + id +
+                ", fileName='" + fileName + '\'' +
+                ", originalName='" + originalName + '\'' +
+                ", fileType='" + fileType + '\'' +
+                ", fileSize=" + fileSize +
+                ", subject='" + subject + '\'' +
+                ", folderId=" + folderId +
+                ", folderName='" + folderName + '\'' +
+                '}';
     }
 }

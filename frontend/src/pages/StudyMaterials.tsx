@@ -1,5 +1,6 @@
 import {
   Add,
+  Chat,
   Close,
   CloudUpload,
   Delete,
@@ -29,17 +30,19 @@ import {
   Typography,
 } from "@mui/material";
 import React, { useEffect, useState } from "react";
+import StudyMaterialChatbot from "../components/StudyMaterialChatbot";
 
 // Ensure this file is treated as a module
 export {};
 
 interface StudyMaterial {
   id: number;
-  filename: string;
-  originalFilename: string;
+  fileName: string;
+  originalName: string;
   fileType: "PDF" | "PPTX";
   fileSize: number;
-  uploadDate: string;
+  createdAt: string;
+  updatedAt: string;
   subject?: string;
   description?: string;
 }
@@ -55,6 +58,9 @@ const StudyMaterials: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [chatbotOpen, setChatbotOpen] = useState(false);
+  const [selectedMaterialForChat, setSelectedMaterialForChat] =
+    useState<StudyMaterial | null>(null);
 
   useEffect(() => {
     fetchMaterials();
@@ -175,7 +181,7 @@ const StudyMaterials: React.FC = () => {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = material.originalFilename;
+      a.download = material.originalName;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -221,11 +227,19 @@ const StudyMaterials: React.FC = () => {
     setDescription("");
   };
 
+  const handleOpenChatbot = (material: StudyMaterial) => {
+    setSelectedMaterialForChat(material);
+    setChatbotOpen(true);
+  };
+
+  const handleCloseChatbot = () => {
+    setChatbotOpen(false);
+    setSelectedMaterialForChat(null);
+  };
+
   const filteredMaterials = materials.filter(
     (material) =>
-      material.originalFilename
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
+      material.originalName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       material.subject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       material.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -254,7 +268,8 @@ const StudyMaterials: React.FC = () => {
         </Typography>
         <Typography variant="body1" color="text.secondary" paragraph>
           Upload and manage your PDF documents and PowerPoint presentations for
-          studying.
+          studying. Use the AI chatbot to get summaries, key topics, and ask
+          questions about your materials.
         </Typography>
       </Box>
 
@@ -339,7 +354,7 @@ const StudyMaterials: React.FC = () => {
                         sx={{ ml: 1, flexGrow: 1 }}
                         noWrap
                       >
-                        {material.originalFilename}
+                        {material.originalName}
                       </Typography>
                     </Box>
 
@@ -368,7 +383,7 @@ const StudyMaterials: React.FC = () => {
                     <br />
                     <Typography variant="caption" color="text.secondary">
                       Uploaded:{" "}
-                      {new Date(material.uploadDate).toLocaleDateString()}
+                      {new Date(material.createdAt).toLocaleDateString()}
                     </Typography>
                   </CardContent>
 
@@ -379,6 +394,14 @@ const StudyMaterials: React.FC = () => {
                       onClick={() => handleDownload(material)}
                     >
                       Download
+                    </Button>
+                    <Button
+                      size="small"
+                      startIcon={<Chat />}
+                      onClick={() => handleOpenChatbot(material)}
+                      color="primary"
+                    >
+                      Chat
                     </Button>
                     <IconButton
                       size="small"
@@ -485,6 +508,14 @@ const StudyMaterials: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* AI Chatbot */}
+      <StudyMaterialChatbot
+        open={chatbotOpen}
+        onClose={handleCloseChatbot}
+        selectedMaterial={selectedMaterialForChat}
+        materials={materials}
+      />
     </Container>
   );
 };

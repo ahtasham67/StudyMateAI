@@ -90,6 +90,35 @@ public class StudySessionController {
         return ResponseEntity.notFound().build();
     }
 
+    @PutMapping("/{id}/end")
+    public ResponseEntity<StudySession> endStudySession(@PathVariable Long id, @AuthenticationPrincipal User user) {
+        Optional<StudySession> optionalSession = studySessionRepository.findById(id);
+        if (optionalSession.isPresent() && optionalSession.get().getUser().getId().equals(user.getId())) {
+            StudySession session = optionalSession.get();
+
+            // Only end if session is currently active (no end time set)
+            if (session.getEndTime() == null) {
+                session.setEndTime(LocalDateTime.now());
+                session.setStatus(StudySession.Status.COMPLETED);
+                session.setUpdatedAt(LocalDateTime.now());
+
+                // Calculate duration in minutes
+                if (session.getStartTime() != null) {
+                    long durationMinutes = java.time.Duration.between(session.getStartTime(), session.getEndTime())
+                            .toMinutes();
+                    session.setDurationMinutes((int) durationMinutes);
+                }
+
+                StudySession updatedSession = studySessionRepository.save(session);
+                return ResponseEntity.ok(updatedSession);
+            } else {
+                // Session already ended
+                return ResponseEntity.badRequest().build();
+            }
+        }
+        return ResponseEntity.notFound().build();
+    }
+
     @GetMapping("/subject/{subject}")
     public ResponseEntity<List<StudySession>> getStudySessionsBySubject(@PathVariable String subject,
             @AuthenticationPrincipal User user) {
