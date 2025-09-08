@@ -30,7 +30,7 @@ interface StudyMaterial {
   id: number;
   fileName: string;
   originalName: string;
-  fileType: "PDF" | "PPTX";
+  fileType: "PDF" | "PPTX" | "PPT";
   fileSize: number;
   createdAt: string;
   updatedAt: string;
@@ -61,6 +61,216 @@ interface MaterialCache {
   summary?: string;
   topics?: string[];
 }
+
+// Enhanced text formatting function for AI responses
+const renderFormattedLine = (line: string, message: ChatMessage) => {
+  const getThemeColor = (messageType?: string) => {
+    switch (messageType) {
+      case "summary":
+        return "#ff6b35";
+      case "topics":
+        return "#4caf50";
+      default:
+        return "#2196f3";
+    }
+  };
+
+  const themeColor = getThemeColor(message.messageType);
+
+  // Handle bullet points
+  if (line.trim().startsWith("•") || line.trim().startsWith("-")) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "flex-start",
+          mb: 0.5,
+        }}
+      >
+        <Box
+          sx={{
+            color: themeColor,
+            mr: 1,
+            mt: "2px",
+            fontSize: "0.8rem",
+          }}
+        >
+          ▸
+        </Box>
+        <Box>{parseInlineFormatting(line.replace(/^[•-]\s*/, ""))}</Box>
+      </Box>
+    );
+  }
+
+  // Handle numbered lists
+  if (/^\d+\./.test(line.trim())) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "flex-start",
+          mb: 0.5,
+        }}
+      >
+        <Box
+          sx={{
+            color: themeColor,
+            mr: 1,
+            fontWeight: 600,
+            fontSize: "0.85rem",
+          }}
+        >
+          {line.match(/^\d+/)?.[0]}.
+        </Box>
+        <Box>{parseInlineFormatting(line.replace(/^\d+\.\s*/, ""))}</Box>
+      </Box>
+    );
+  }
+
+  // Handle headers (lines starting with #)
+  if (line.trim().startsWith("##")) {
+    return (
+      <Typography
+        variant="h6"
+        sx={{
+          color: themeColor,
+          fontWeight: 700,
+          fontSize: "1.1rem",
+          mb: 1,
+          mt: 1.5,
+        }}
+      >
+        {parseInlineFormatting(line.replace(/^#+\s*/, ""))}
+      </Typography>
+    );
+  }
+
+  if (line.trim().startsWith("#")) {
+    return (
+      <Typography
+        variant="h5"
+        sx={{
+          color: themeColor,
+          fontWeight: 700,
+          fontSize: "1.2rem",
+          mb: 1,
+          mt: 2,
+        }}
+      >
+        {parseInlineFormatting(line.replace(/^#+\s*/, ""))}
+      </Typography>
+    );
+  }
+
+  // Handle code blocks (lines starting with ```)
+  if (line.trim().startsWith("```")) {
+    return (
+      <Box
+        sx={{
+          bgcolor: "rgba(0,0,0,0.3)",
+          p: 1.5,
+          borderRadius: "8px",
+          border: `1px solid ${themeColor}`,
+          fontFamily: "monospace",
+          fontSize: "0.85rem",
+          color: "#e0e0e0",
+          my: 1,
+          overflow: "auto",
+        }}
+      >
+        {line.replace(/```/g, "")}
+      </Box>
+    );
+  }
+
+  // Regular text with inline formatting
+  return <span>{parseInlineFormatting(line)}</span>;
+};
+
+// Parse inline formatting like **bold**, *italic*, `code`
+const parseInlineFormatting = (text: string) => {
+  if (!text) return text;
+
+  const parts: React.ReactNode[] = [];
+  let remainingText = text;
+  let key = 0;
+
+  while (remainingText.length > 0) {
+    // Bold text **text**
+    const boldMatch = remainingText.match(/\*\*(.*?)\*\*/);
+    if (boldMatch && boldMatch.index !== undefined) {
+      // Add text before bold
+      if (boldMatch.index > 0) {
+        parts.push(remainingText.substring(0, boldMatch.index));
+      }
+      // Add bold text
+      parts.push(
+        <span key={key++} style={{ fontWeight: 700, color: "#ffffff" }}>
+          {boldMatch[1]}
+        </span>
+      );
+      remainingText = remainingText.substring(
+        boldMatch.index + boldMatch[0].length
+      );
+      continue;
+    }
+
+    // Italic text *text*
+    const italicMatch = remainingText.match(/\*(.*?)\*/);
+    if (italicMatch && italicMatch.index !== undefined) {
+      // Add text before italic
+      if (italicMatch.index > 0) {
+        parts.push(remainingText.substring(0, italicMatch.index));
+      }
+      // Add italic text
+      parts.push(
+        <span key={key++} style={{ fontStyle: "italic", color: "#e3f2fd" }}>
+          {italicMatch[1]}
+        </span>
+      );
+      remainingText = remainingText.substring(
+        italicMatch.index + italicMatch[0].length
+      );
+      continue;
+    }
+
+    // Code text `text`
+    const codeMatch = remainingText.match(/`(.*?)`/);
+    if (codeMatch && codeMatch.index !== undefined) {
+      // Add text before code
+      if (codeMatch.index > 0) {
+        parts.push(remainingText.substring(0, codeMatch.index));
+      }
+      // Add code text
+      parts.push(
+        <span
+          key={key++}
+          style={{
+            backgroundColor: "rgba(0,0,0,0.4)",
+            padding: "2px 6px",
+            borderRadius: "4px",
+            fontFamily: "monospace",
+            fontSize: "0.9em",
+            color: "#ffeb3b",
+            border: "1px solid rgba(255,255,255,0.2)",
+          }}
+        >
+          {codeMatch[1]}
+        </span>
+      );
+      remainingText = remainingText.substring(
+        codeMatch.index + codeMatch[0].length
+      );
+      continue;
+    }
+
+    // No more formatting found, add remaining text
+    parts.push(remainingText);
+    break;
+  }
+
+  return parts.length === 1 && typeof parts[0] === "string" ? parts[0] : parts;
+};
 
 const StudyMaterialChatbot: React.FC<StudyMaterialChatbotProps> = ({
   open,
@@ -787,76 +997,9 @@ const StudyMaterialChatbot: React.FC<StudyMaterialChatbotProps> = ({
                       }}
                     >
                       {message.content.split("\n").map((line, index) => {
-                        // Enhanced formatting for bot messages
-                        if (message.type === "bot") {
-                          // Handle bullet points
-                          if (
-                            line.trim().startsWith("•") ||
-                            line.trim().startsWith("-")
-                          ) {
-                            return (
-                              <Box
-                                key={index}
-                                sx={{
-                                  display: "flex",
-                                  alignItems: "flex-start",
-                                  mb: 0.5,
-                                }}
-                              >
-                                <Box
-                                  sx={{
-                                    color:
-                                      message.messageType === "summary"
-                                        ? "#ff6b35"
-                                        : message.messageType === "topics"
-                                        ? "#4caf50"
-                                        : "#2196f3",
-                                    mr: 1,
-                                    mt: "2px",
-                                    fontSize: "0.8rem",
-                                  }}
-                                >
-                                  ▸
-                                </Box>
-                                <Box>{line.replace(/^[•-]\s*/, "")}</Box>
-                              </Box>
-                            );
-                          }
-                          // Handle numbered lists
-                          if (/^\d+\./.test(line.trim())) {
-                            return (
-                              <Box
-                                key={index}
-                                sx={{
-                                  display: "flex",
-                                  alignItems: "flex-start",
-                                  mb: 0.5,
-                                }}
-                              >
-                                <Box
-                                  sx={{
-                                    color:
-                                      message.messageType === "summary"
-                                        ? "#ff6b35"
-                                        : message.messageType === "topics"
-                                        ? "#4caf50"
-                                        : "#2196f3",
-                                    mr: 1,
-                                    fontWeight: 600,
-                                    fontSize: "0.85rem",
-                                  }}
-                                >
-                                  {line.match(/^\d+/)?.[0]}.
-                                </Box>
-                                <Box>{line.replace(/^\d+\.\s*/, "")}</Box>
-                              </Box>
-                            );
-                          }
-                        }
-
                         return (
                           <React.Fragment key={index}>
-                            {line}
+                            {renderFormattedLine(line, message)}
                             {index < message.content.split("\n").length - 1 && (
                               <br />
                             )}

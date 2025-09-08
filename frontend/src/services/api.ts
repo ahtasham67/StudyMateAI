@@ -481,4 +481,45 @@ export const knowledgeAPI = {
     api.get(`/knowledge/summary?query=${encodeURIComponent(query)}`),
 };
 
+// Schedule API
+export const scheduleAPI = {
+  createSchedule: (scheduleData: any): Promise<AxiosResponse<any>> =>
+    api.post("/schedules", scheduleData),
+
+  getAllSchedules: (): Promise<AxiosResponse<any[]>> => api.get("/schedules"),
+
+  getSchedulesInRange: (
+    startDate: string,
+    endDate: string
+  ): Promise<AxiosResponse<any[]>> =>
+    api.get(
+      `/schedules/range?startDate=${encodeURIComponent(
+        startDate
+      )}&endDate=${encodeURIComponent(endDate)}`
+    ),
+
+  getUpcomingSchedules: (): Promise<AxiosResponse<any[]>> =>
+    api.get("/schedules/upcoming"),
+
+  getSchedulesForDate: (date: string): Promise<AxiosResponse<any[]>> =>
+    api.get(`/schedules/date?date=${encodeURIComponent(date)}`),
+
+  getScheduleById: (id: number): Promise<AxiosResponse<any>> =>
+    api.get(`/schedules/${id}`),
+
+  updateSchedule: (
+    id: number,
+    scheduleData: any
+  ): Promise<AxiosResponse<any>> => api.put(`/schedules/${id}`, scheduleData),
+
+  deleteSchedule: (id: number): Promise<AxiosResponse<void>> =>
+    api.delete(`/schedules/${id}`),
+
+  updateScheduleStatus: (
+    id: number,
+    status: string
+  ): Promise<AxiosResponse<any>> =>
+    api.patch(`/schedules/${id}/status`, { status }),
+};
+
 export default api;

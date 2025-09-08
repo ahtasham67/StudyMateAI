@@ -68,6 +68,7 @@ public class WebSecurityConfig {
                         .requestMatchers("/discussions/**").permitAll()
                         .requestMatchers("/public/**").permitAll()
                         .requestMatchers("/profile/photo/**").permitAll()
+                        .requestMatchers("/schedules/**").permitAll()
                         .anyRequest().authenticated());
 
         http.authenticationProvider(authenticationProvider());

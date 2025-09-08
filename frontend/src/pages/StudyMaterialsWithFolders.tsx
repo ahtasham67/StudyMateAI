@@ -2,10 +2,12 @@ import {
   Chat,
   Delete,
   Download,
+  Edit,
   Folder as FolderIcon,
   GridView,
   InsertDriveFile,
   MoreVert,
+  Note as NoteIcon,
   Quiz as QuizIcon,
   Upload,
   ViewList,
@@ -43,14 +45,19 @@ import { format } from "date-fns";
 import React, { useEffect, useState } from "react";
 import FolderTree from "../components/FolderTree";
 import StudyMaterialChatbot from "../components/StudyMaterialChatbot";
-import { folderAPI, quizAPI, studyMaterialsAPI } from "../services/api";
-import { CreateQuizRequest } from "../types";
+import {
+  folderAPI,
+  notesAPI,
+  quizAPI,
+  studyMaterialsAPI,
+} from "../services/api";
+import { CreateQuizRequest, Note } from "../types";
 
 interface StudyMaterial {
   id: number;
   fileName: string;
   originalName: string;
-  fileType: "PDF" | "PPTX";
+  fileType: "PDF" | "PPTX" | "PPT";
   fileSize: number;
   subject?: string;
   description?: string;
@@ -73,25 +80,39 @@ interface StudyFolder {
 const StudyMaterialsWithFolders: React.FC = () => {
   // State management
   const [materials, setMaterials] = useState<StudyMaterial[]>([]);
+  const [notes, setNotes] = useState<Note[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<number | null>(null);
   const [folderHierarchy, setFolderHierarchy] = useState<StudyFolder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [contentType, setContentType] = useState<"materials" | "notes" | "all">(
+    "all"
+  );
 
   // Dialog states
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [noteDialogOpen, setNoteDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [quizDialogOpen, setQuizDialogOpen] = useState(false);
   const [chatbotOpen, setChatbotOpen] = useState(false);
   const [selectedMaterial, setSelectedMaterial] =
     useState<StudyMaterial | null>(null);
+  const [selectedNote, setSelectedNote] = useState<Note | null>(null);
+  const [editingNote, setEditingNote] = useState<Note | null>(null);
 
   // Upload form
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadSubject, setUploadSubject] = useState("");
   const [uploadDescription, setUploadDescription] = useState("");
   const [uploading, setUploading] = useState(false);
+
+  // Note form
+  const [noteTitle, setNoteTitle] = useState("");
+  const [noteContent, setNoteContent] = useState("");
+  const [noteSubject, setNoteSubject] = useState("");
+  const [noteTags, setNoteTags] = useState("");
+  const [savingNote, setSavingNote] = useState(false);
 
   // Quiz form
   const [quizTitle, setQuizTitle] = useState("");
@@ -133,6 +154,9 @@ const StudyMaterialsWithFolders: React.FC = () => {
         }
 
         setMaterials(response.data);
+
+        // Also load notes
+        await loadNotes();
       } catch (err: any) {
         setError("Failed to load materials");
         console.error("Error loading materials:", err);
@@ -181,6 +205,187 @@ const StudyMaterialsWithFolders: React.FC = () => {
       console.error("Error loading materials:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadNotes = async () => {
+    try {
+      const response = await notesAPI.getAll();
+      // Filter notes by folder if needed (when folder-based notes are implemented in backend)
+      setNotes(response.data);
+    } catch (err: any) {
+      setError("Failed to load notes");
+      console.error("Error loading notes:", err);
+    }
+  };
+
+  const handleCreateNote = () => {
+    setEditingNote(null);
+    setNoteTitle("");
+    setNoteContent("");
+    setNoteSubject("");
+    setNoteTags("");
+    setNoteDialogOpen(true);
+  };
+
+  // Filter content based on content type and folder
+  const getFilteredContent = () => {
+    const folderMaterials = materials.filter((material) =>
+      selectedFolderId
+        ? material.folder?.id === selectedFolderId
+        : !material.folder
+    );
+    const folderNotes = notes.filter((note) =>
+      selectedFolderId ? note.folder?.id === selectedFolderId : !note.folder
+    );
+
+    switch (contentType) {
+      case "materials":
+        return { materials: folderMaterials, notes: [] };
+      case "notes":
+        return { materials: [], notes: folderNotes };
+      default: // 'all'
+        return { materials: folderMaterials, notes: folderNotes };
+    }
+  };
+
+  const { materials: filteredMaterials, notes: filteredNotes } =
+    getFilteredContent();
+
+  const renderNoteCard = (note: Note) => (
+    <Card key={note.id} sx={{ position: "relative" }}>
+      <CardContent>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            mb: 1,
+          }}
+        >
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            {note.title}
+          </Typography>
+          <IconButton
+            size="small"
+            onClick={(e) => {
+              setMenuAnchorEl(e.currentTarget);
+              setSelectedNote(note);
+            }}
+          >
+            <MoreVert />
+          </IconButton>
+        </Box>
+
+        {note.subject && (
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+            Subject: {note.subject}
+          </Typography>
+        )}
+
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{
+            mb: 2,
+            display: "-webkit-box",
+            WebkitLineClamp: 3,
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
+          }}
+        >
+          {note.content}
+        </Typography>
+
+        {note.category && (
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, mb: 1 }}>
+            <Chip label={note.category} size="small" variant="outlined" />
+          </Box>
+        )}
+
+        <Typography variant="caption" color="text.secondary">
+          Created: {format(new Date(note.createdAt), "MMM dd, yyyy")}
+        </Typography>
+      </CardContent>
+    </Card>
+  );
+
+  const handleEditNote = (note: Note) => {
+    setEditingNote(note);
+    setNoteTitle(note.title);
+    setNoteContent(note.content);
+    setNoteSubject(note.subject || "");
+    setNoteTags(note.category || "");
+    setNoteDialogOpen(true);
+    setMenuAnchorEl(null);
+  };
+
+  const handleSaveNote = async () => {
+    try {
+      setSavingNote(true);
+      const selectedFolderId =
+        folderHierarchy.length > 0
+          ? folderHierarchy[folderHierarchy.length - 1]?.id
+          : null;
+
+      const noteData = {
+        title: noteTitle,
+        content: noteContent,
+        subject: noteSubject || undefined,
+        category: noteTags || undefined,
+        folder: selectedFolderId
+          ? {
+              id: selectedFolderId,
+            }
+          : undefined,
+      };
+
+      if (editingNote) {
+        await notesAPI.update(editingNote.id, noteData);
+        setSnackbar({
+          open: true,
+          message: "Note updated successfully!",
+          severity: "success",
+        });
+      } else {
+        await notesAPI.create(noteData);
+        setSnackbar({
+          open: true,
+          message: "Note created successfully!",
+          severity: "success",
+        });
+      }
+
+      setNoteDialogOpen(false);
+      await loadNotes();
+    } catch (err: any) {
+      setSnackbar({
+        open: true,
+        message: "Failed to save note",
+        severity: "error",
+      });
+      console.error("Error saving note:", err);
+    } finally {
+      setSavingNote(false);
+    }
+  };
+
+  const handleDeleteNote = async (noteId: number) => {
+    try {
+      await notesAPI.delete(noteId);
+      setSnackbar({
+        open: true,
+        message: "Note deleted successfully!",
+        severity: "success",
+      });
+      await loadNotes();
+    } catch (err: any) {
+      setSnackbar({
+        open: true,
+        message: "Failed to delete note",
+        severity: "error",
+      });
+      console.error("Error deleting note:", err);
     }
   };
 
@@ -260,6 +465,7 @@ const StudyMaterialsWithFolders: React.FC = () => {
   const handleMenuClose = () => {
     setMenuAnchorEl(null);
     setMenuMaterial(null);
+    setSelectedNote(null);
   };
 
   const handleOpenChatbot = (material: StudyMaterial) => {
@@ -587,7 +793,7 @@ const StudyMaterialsWithFolders: React.FC = () => {
           >
             <Box>
               <Typography variant="h5" component="h1">
-                Study Materials - Organized
+                Learning Materials - Organized
               </Typography>
 
               {/* Breadcrumbs */}
@@ -623,6 +829,28 @@ const StudyMaterialsWithFolders: React.FC = () => {
             </Box>
 
             <Box sx={{ display: "flex", gap: 1 }}>
+              {/* Content Filter Chips */}
+              <Box sx={{ display: "flex", gap: 0.5, mr: 2 }}>
+                <Chip
+                  label="All"
+                  color={contentType === "all" ? "primary" : "default"}
+                  onClick={() => setContentType("all")}
+                  clickable
+                />
+                <Chip
+                  label="Files"
+                  color={contentType === "materials" ? "primary" : "default"}
+                  onClick={() => setContentType("materials")}
+                  clickable
+                />
+                <Chip
+                  label="Notes"
+                  color={contentType === "notes" ? "primary" : "default"}
+                  onClick={() => setContentType("notes")}
+                  clickable
+                />
+              </Box>
+
               <Tooltip title="Grid View">
                 <IconButton
                   onClick={() => setViewMode("grid")}
@@ -656,6 +884,14 @@ const StudyMaterialsWithFolders: React.FC = () => {
                 </IconButton>
               </Tooltip>
               <Button
+                variant="outlined"
+                startIcon={<NoteIcon />}
+                onClick={handleCreateNote}
+                sx={{ mr: 1 }}
+              >
+                Create Note
+              </Button>
+              <Button
                 variant="contained"
                 startIcon={<Upload />}
                 onClick={() => setUploadDialogOpen(true)}
@@ -678,7 +914,7 @@ const StudyMaterialsWithFolders: React.FC = () => {
             <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
               <CircularProgress />
             </Box>
-          ) : materials.length === 0 ? (
+          ) : filteredMaterials.length === 0 && filteredNotes.length === 0 ? (
             <Box
               sx={{
                 display: "flex",
@@ -693,20 +929,51 @@ const StudyMaterialsWithFolders: React.FC = () => {
                 sx={{ fontSize: 64, color: "text.secondary", mb: 2 }}
               />
               <Typography variant="h6" color="text.secondary" gutterBottom>
-                No files found
+                {contentType === "materials"
+                  ? "No files found"
+                  : contentType === "notes"
+                  ? "No notes found"
+                  : "No content found"}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                 {selectedFolderId
-                  ? "This folder is empty. Upload some files to get started."
-                  : "No unorganized files. All files are organized in folders."}
+                  ? `This folder is empty. ${
+                      contentType === "notes"
+                        ? "Create some notes"
+                        : "Upload some files"
+                    } to get started.`
+                  : `No unorganized ${
+                      contentType === "notes"
+                        ? "notes"
+                        : contentType === "materials"
+                        ? "files"
+                        : "content"
+                    }. ${
+                      contentType === "notes"
+                        ? "All notes are organized in folders"
+                        : "All files are organized in folders"
+                    }.`}
               </Typography>
-              <Button
-                variant="contained"
-                startIcon={<Upload />}
-                onClick={() => setUploadDialogOpen(true)}
-              >
-                Upload File
-              </Button>
+              <Box sx={{ display: "flex", gap: 2 }}>
+                {(contentType === "all" || contentType === "materials") && (
+                  <Button
+                    variant="contained"
+                    startIcon={<Upload />}
+                    onClick={() => setUploadDialogOpen(true)}
+                  >
+                    Upload File
+                  </Button>
+                )}
+                {(contentType === "all" || contentType === "notes") && (
+                  <Button
+                    variant="outlined"
+                    startIcon={<NoteIcon />}
+                    onClick={handleCreateNote}
+                  >
+                    Create Note
+                  </Button>
+                )}
+              </Box>
             </Box>
           ) : viewMode === "grid" ? (
             <Box
@@ -716,11 +983,82 @@ const StudyMaterialsWithFolders: React.FC = () => {
                 gap: 2,
               }}
             >
-              {materials.map((material) => renderMaterialCard(material))}
+              {filteredMaterials.map((material) =>
+                renderMaterialCard(material)
+              )}
+              {filteredNotes.map((note) => renderNoteCard(note))}
             </Box>
           ) : (
             <List sx={{ width: "100%" }}>
-              {materials.map((material) => renderMaterialListItem(material))}
+              {filteredMaterials.map((material) =>
+                renderMaterialListItem(material)
+              )}
+              {filteredNotes.map((note, index) => (
+                <ListItem
+                  key={`note-${note.id}`}
+                  divider={index < filteredNotes.length - 1}
+                >
+                  <ListItemText
+                    primary={note.title}
+                    secondary={
+                      <Box>
+                        {note.subject && (
+                          <Typography variant="body2" color="text.secondary">
+                            Subject: {note.subject}
+                          </Typography>
+                        )}
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                            mt: 0.5,
+                          }}
+                        >
+                          {note.content}
+                        </Typography>
+                        {note.category && (
+                          <Box
+                            sx={{
+                              display: "flex",
+                              flexWrap: "wrap",
+                              gap: 0.5,
+                              mt: 1,
+                            }}
+                          >
+                            <Chip
+                              label={note.category}
+                              size="small"
+                              variant="outlined"
+                            />
+                          </Box>
+                        )}
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{ display: "block", mt: 1 }}
+                        >
+                          Created:{" "}
+                          {format(new Date(note.createdAt), "MMM dd, yyyy")}
+                        </Typography>
+                      </Box>
+                    }
+                  />
+                  <ListItemSecondaryAction>
+                    <IconButton
+                      onClick={(e) => {
+                        setMenuAnchorEl(e.currentTarget);
+                        setSelectedNote(note);
+                      }}
+                    >
+                      <MoreVert />
+                    </IconButton>
+                  </ListItemSecondaryAction>
+                </ListItem>
+              ))}
             </List>
           )}
         </Box>
@@ -732,26 +1070,54 @@ const StudyMaterialsWithFolders: React.FC = () => {
         open={Boolean(menuAnchorEl)}
         onClose={handleMenuClose}
       >
-        <MenuItem
-          onClick={() => {
-            if (menuMaterial) handleDownload(menuMaterial);
-            handleMenuClose();
-          }}
-        >
-          <Download sx={{ mr: 1 }} />
-          Download
-        </MenuItem>
-        <MenuItem
-          onClick={() => {
-            setSelectedMaterial(menuMaterial);
-            setDeleteDialogOpen(true);
-            handleMenuClose();
-          }}
-          sx={{ color: "error.main" }}
-        >
-          <Delete sx={{ mr: 1 }} />
-          Delete
-        </MenuItem>
+        {selectedNote ? (
+          // Note menu items
+          <>
+            <MenuItem
+              onClick={() => {
+                if (selectedNote) handleEditNote(selectedNote);
+                handleMenuClose();
+              }}
+            >
+              <Edit sx={{ mr: 1 }} />
+              Edit
+            </MenuItem>
+            <MenuItem
+              onClick={() => {
+                if (selectedNote) handleDeleteNote(selectedNote.id);
+                handleMenuClose();
+              }}
+              sx={{ color: "error.main" }}
+            >
+              <Delete sx={{ mr: 1 }} />
+              Delete
+            </MenuItem>
+          </>
+        ) : (
+          // Material menu items
+          <>
+            <MenuItem
+              onClick={() => {
+                if (menuMaterial) handleDownload(menuMaterial);
+                handleMenuClose();
+              }}
+            >
+              <Download sx={{ mr: 1 }} />
+              Download
+            </MenuItem>
+            <MenuItem
+              onClick={() => {
+                setSelectedMaterial(menuMaterial);
+                setDeleteDialogOpen(true);
+                handleMenuClose();
+              }}
+              sx={{ color: "error.main" }}
+            >
+              <Delete sx={{ mr: 1 }} />
+              Delete
+            </MenuItem>
+          </>
+        )}
       </Menu>
 
       {/* Upload Dialog */}
@@ -914,6 +1280,71 @@ const StudyMaterialsWithFolders: React.FC = () => {
           materials={materials}
         />
       )}
+
+      {/* Note Dialog */}
+      <Dialog
+        open={noteDialogOpen}
+        onClose={() => setNoteDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          {editingNote ? "Edit Note" : "Create New Note"}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2 }}>
+            <TextField
+              fullWidth
+              label="Title"
+              value={noteTitle}
+              onChange={(e) => setNoteTitle(e.target.value)}
+              sx={{ mb: 2 }}
+            />
+
+            <TextField
+              fullWidth
+              label="Subject"
+              value={noteSubject}
+              onChange={(e) => setNoteSubject(e.target.value)}
+              sx={{ mb: 2 }}
+            />
+
+            <TextField
+              fullWidth
+              label="Content"
+              multiline
+              rows={8}
+              value={noteContent}
+              onChange={(e) => setNoteContent(e.target.value)}
+              sx={{ mb: 2 }}
+            />
+
+            <TextField
+              fullWidth
+              label="Tags (comma-separated)"
+              value={noteTags}
+              onChange={(e) => setNoteTags(e.target.value)}
+              helperText="Enter tags separated by commas"
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setNoteDialogOpen(false)}>Cancel</Button>
+          <Button
+            onClick={handleSaveNote}
+            variant="contained"
+            disabled={!noteTitle || !noteContent || savingNote}
+          >
+            {savingNote ? (
+              <CircularProgress size={20} />
+            ) : editingNote ? (
+              "Update"
+            ) : (
+              "Create"
+            )}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Snackbar */}
       <Snackbar

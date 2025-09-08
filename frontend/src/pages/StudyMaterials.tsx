@@ -39,7 +39,7 @@ interface StudyMaterial {
   id: number;
   fileName: string;
   originalName: string;
-  fileType: "PDF" | "PPTX";
+  fileType: "PDF" | "PPTX" | "PPT";
   fileSize: number;
   createdAt: string;
   updatedAt: string;
@@ -113,7 +113,7 @@ const StudyMaterials: React.FC = () => {
         setSelectedFile(file);
         setError(null);
       } else {
-        setError("Please select a PDF or PPTX file");
+        setError("Please select a PDF, PPT, or PPTX file");
         setSelectedFile(null);
       }
     }
@@ -452,7 +452,7 @@ const StudyMaterials: React.FC = () => {
                 fullWidth
                 sx={{ mb: 2 }}
               >
-                Choose File (PDF or PPTX)
+                Choose File (PDF, PPT, or PPTX)
               </Button>
             </label>
 

@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.studymate.backend.model.StudyFolder;
@@ -64,10 +65,12 @@ public class StudyMaterialService {
         return studyMaterialRepository.save(studyMaterial);
     }
 
+    @Transactional(readOnly = true)
     public List<StudyMaterial> getUserMaterials(Long userId) {
         return studyMaterialRepository.findByUserIdOrderByCreatedAtDesc(userId);
     }
 
+    @Transactional(readOnly = true)
     public StudyMaterial getMaterialById(Long id, Long userId) {
         return studyMaterialRepository.findByIdAndUserId(id, userId).orElse(null);
     }
@@ -81,26 +84,32 @@ public class StudyMaterialService {
         return false;
     }
 
+    @Transactional(readOnly = true)
     public List<StudyMaterial> searchMaterials(String query, Long userId) {
         return studyMaterialRepository.searchByUserIdAndQuery(userId, query);
     }
 
+    @Transactional(readOnly = true)
     public List<StudyMaterial> getMaterialsBySubject(String subject, Long userId) {
         return studyMaterialRepository.findByUserIdAndSubjectContainingIgnoreCase(userId, subject);
     }
 
+    @Transactional(readOnly = true)
     public List<StudyMaterial> getMaterialsByFileType(StudyMaterial.FileType fileType, Long userId) {
         return studyMaterialRepository.findByUserIdAndFileType(userId, fileType);
     }
 
+    @Transactional(readOnly = true)
     public long getUserMaterialCount(Long userId) {
         return studyMaterialRepository.countByUserId(userId);
     }
 
+    @Transactional(readOnly = true)
     public List<StudyMaterial> getMaterialsInFolder(Long folderId, Long userId) {
         return studyMaterialRepository.findByUserIdAndFolderIdOrderByCreatedAtDesc(userId, folderId);
     }
 
+    @Transactional(readOnly = true)
     public List<StudyMaterial> getMaterialsWithoutFolder(Long userId) {
         return studyMaterialRepository.findByUserIdAndFolderIsNullOrderByCreatedAtDesc(userId);
     }

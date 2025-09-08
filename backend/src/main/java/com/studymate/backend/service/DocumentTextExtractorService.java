@@ -8,6 +8,10 @@ import java.util.StringJoiner;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
+import org.apache.poi.hslf.usermodel.HSLFShape;
+import org.apache.poi.hslf.usermodel.HSLFSlide;
+import org.apache.poi.hslf.usermodel.HSLFSlideShow;
+import org.apache.poi.hslf.usermodel.HSLFTextShape;
 import org.apache.poi.openxml4j.opc.OPCPackage;
 import org.apache.poi.xslf.usermodel.XMLSlideShow;
 import org.apache.poi.xslf.usermodel.XSLFShape;
@@ -70,6 +74,9 @@ public class DocumentTextExtractorService {
         } else if (contentType.equals("application/vnd.openxmlformats-officedocument.presentationml.presentation") ||
                 (filename != null && filename.toLowerCase().endsWith(".pptx"))) {
             return extractTextFromPPTX(inputStream);
+        } else if (contentType.equals("application/vnd.ms-powerpoint") ||
+                (filename != null && filename.toLowerCase().endsWith(".ppt"))) {
+            return extractTextFromPPT(inputStream);
         } else {
             throw new IllegalArgumentException("Unsupported file type: " + contentType);
         }
@@ -127,6 +134,44 @@ public class DocumentTextExtractorService {
         } catch (Exception e) {
             logger.error("Error extracting text from PPTX: {}", e.getMessage());
             throw new IOException("Failed to extract text from PPTX: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Extract text from PPT file (older PowerPoint format)
+     */
+    private String extractTextFromPPT(InputStream inputStream) throws IOException {
+        try (HSLFSlideShow ppt = new HSLFSlideShow(inputStream)) {
+
+            StringJoiner textJoiner = new StringJoiner("\n\n");
+
+            for (HSLFSlide slide : ppt.getSlides()) {
+                StringJoiner slideText = new StringJoiner("\n");
+
+                for (HSLFShape shape : slide.getShapes()) {
+                    if (shape instanceof HSLFTextShape) {
+                        HSLFTextShape textShape = (HSLFTextShape) shape;
+                        String shapeText = textShape.getText();
+                        if (shapeText != null && !shapeText.trim().isEmpty()) {
+                            slideText.add(shapeText.trim());
+                        }
+                    }
+                }
+
+                String slideContent = slideText.toString();
+                if (!slideContent.isEmpty()) {
+                    textJoiner.add("Slide:\n" + slideContent);
+                }
+            }
+
+            String extractedText = textJoiner.toString();
+            logger.info("Extracted {} characters from PPT ({} slides)",
+                    extractedText.length(), ppt.getSlides().size());
+
+            return cleanAndValidateText(extractedText);
+        } catch (Exception e) {
+            logger.error("Error extracting text from PPT: {}", e.getMessage());
+            throw new IOException("Failed to extract text from PPT: " + e.getMessage(), e);
         }
     }
 

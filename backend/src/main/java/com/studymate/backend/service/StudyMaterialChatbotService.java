@@ -196,15 +196,27 @@ public class StudyMaterialChatbotService {
                         %s
 
                         INSTRUCTIONS:
-                        - Provide a clear, well-structured summary
-                        - Highlight the main concepts and key points
-                        - Organize information logically with headings if appropriate
+                        - Provide a clear, well-structured summary with proper formatting
+                        - Use **bold text** for key concepts and important terms
+                        - Use *italic text* for emphasis and definitions
+                        - Use `code formatting` for technical terms, formulas, or specific examples
+                        - Start with a # Main Topic heading
+                        - Use ## Section headings to organize content
+                        - Use bullet points (-) or numbered lists (1.) for key points
+                        - Highlight the main concepts and key points clearly
                         - Focus on the most important information for studying
-                        - Use bullet points or numbered lists where helpful
                         - Keep it academic and educational in tone
                         - Aim for 300-500 words unless the content requires more detail
 
-                        Please provide the summary in a clear, readable format.
+                        FORMAT YOUR RESPONSE with markdown-like formatting:
+                        - Use **bold** for important terms
+                        - Use *italic* for emphasis
+                        - Use `backticks` for technical terms
+                        - Use # and ## for headings
+                        - Use - for bullet points
+                        - Use 1. 2. 3. for numbered lists
+
+                        Please provide the summary in a clear, formatted structure.
                         """,
                 fileName, content);
     }
@@ -238,7 +250,11 @@ public class StudyMaterialChatbotService {
                         %s
 
                         INSTRUCTIONS:
-                        - Answer the question directly and clearly
+                        - Answer the question directly and clearly with proper formatting
+                        - Use **bold text** for key concepts and important points
+                        - Use *italic text* for emphasis and definitions
+                        - Use `code formatting` for technical terms, formulas, or examples
+                        - Use bullet points (-) or numbered lists (1.) for multiple points
                         - Base your answer primarily on the provided study material
                         - If the question cannot be fully answered from the material, mention this
                         - Provide examples or explanations to help understanding
@@ -246,7 +262,14 @@ public class StudyMaterialChatbotService {
                         - If referencing previous conversation, maintain continuity
                         - Keep responses focused and educational
 
-                        Please provide a helpful and informative answer.
+                        FORMAT YOUR RESPONSE with markdown-like formatting:
+                        - Use **bold** for important terms and concepts
+                        - Use *italic* for emphasis and definitions
+                        - Use `backticks` for technical terms and formulas
+                        - Use - for bullet points when listing multiple items
+                        - Use 1. 2. 3. for step-by-step explanations
+
+                        Please provide a helpful and well-formatted answer.
                         """,
                 fileName, content, contextSection, question);
     }
@@ -265,15 +288,25 @@ public class StudyMaterialChatbotService {
                         %s
 
                         INSTRUCTIONS:
-                        - Identify the main topics and subtopics
-                        - List important concepts and definitions
+                        - Identify the main topics and subtopics with proper formatting
+                        - Use **bold text** for main topics and key concepts
+                        - Use *italic text* for definitions and important details
+                        - Use `code formatting` for technical terms, formulas, or equations
+                        - Use ## Section headings to organize different topic areas
+                        - Use bullet points (-) or numbered lists (1.) for sub-points
+                        - List important concepts and definitions clearly
                         - Highlight key theories, principles, or methods
-                        - Organize information hierarchically if possible
                         - Include relevant formulas, equations, or technical terms
                         - Focus on items that would be important for studying or exams
-                        - Present information in a structured, easy-to-review format
 
-                        Please provide a well-organized overview of the key topics.
+                        FORMAT YOUR RESPONSE with markdown-like formatting:
+                        - Use **bold** for main topics and concepts
+                        - Use *italic* for definitions and emphasis
+                        - Use `backticks` for technical terms and formulas
+                        - Use ## for section headings
+                        - Use - for bullet points
+
+                        Please provide a well-organized and formatted overview of the key topics.
                         """,
                 fileName, content);
     }

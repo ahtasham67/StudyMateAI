@@ -9,17 +9,18 @@ import {
 } from "react-router-dom";
 import Footer from "./components/Footer";
 import Header from "./components/Header";
+import { NotificationProvider } from "./components/NotificationSystem";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import CreateThread from "./pages/CreateThread";
 import Dashboard from "./pages/Dashboard";
 import Discussions from "./pages/Discussions";
 import HomePage from "./pages/HomePage";
 import Login from "./pages/Login";
-import Notes from "./pages/Notes";
 import Profile from "./pages/Profile";
 import QuizTaking from "./pages/QuizTaking";
 import Quizzes from "./pages/Quizzes";
 import Register from "./pages/Register";
+import SmartCalendar from "./pages/SmartCalendar";
 import StudyMaterialsWithFolders from "./pages/StudyMaterialsWithFolders";
 import StudySessions from "./pages/StudySessions";
 import ThreadDetail from "./pages/ThreadDetail";
@@ -178,12 +179,12 @@ function AppContent() {
                 }
               />
               <Route
-                path="/notes"
+                path="/calendar"
                 element={
                   user ? (
                     <Container maxWidth="lg">
                       <Box sx={{ py: 4 }}>
-                        <Notes />
+                        <SmartCalendar />
                       </Box>
                     </Container>
                   ) : (
@@ -200,6 +201,11 @@ function AppContent() {
                     <Navigate to="/login" />
                   )
                 }
+              />
+              {/* Redirect old notes route to study materials */}
+              <Route
+                path="/notes"
+                element={<Navigate to="/study-materials" />}
               />
               <Route
                 path="/study-materials-folders"
@@ -278,7 +284,9 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <NotificationProvider>
+        <AppContent />
+      </NotificationProvider>
     </AuthProvider>
   );
 }

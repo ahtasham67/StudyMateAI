@@ -19,8 +19,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.studymate.backend.model.Note;
+import com.studymate.backend.model.StudyFolder;
 import com.studymate.backend.model.User;
 import com.studymate.backend.repository.NoteRepository;
+import com.studymate.backend.repository.StudyFolderRepository;
 
 import jakarta.validation.Valid;
 
@@ -31,6 +33,9 @@ public class NoteController {
 
     @Autowired
     private NoteRepository noteRepository;
+
+    @Autowired
+    private StudyFolderRepository studyFolderRepository;
 
     @GetMapping
     public ResponseEntity<List<Note>> getAllNotes(@AuthenticationPrincipal User user) {
@@ -50,6 +55,18 @@ public class NoteController {
     @PostMapping
     public ResponseEntity<Note> createNote(@Valid @RequestBody Note note, @AuthenticationPrincipal User user) {
         note.setUser(user);
+
+        // Handle folder association if provided
+        if (note.getFolder() != null && note.getFolder().getId() != null) {
+            Optional<StudyFolder> folder = studyFolderRepository.findByIdAndUserId(
+                    note.getFolder().getId(), user.getId());
+            if (folder.isPresent()) {
+                note.setFolder(folder.get());
+            } else {
+                note.setFolder(null); // Invalid folder, set to null
+            }
+        }
+
         Note savedNote = noteRepository.save(note);
         return ResponseEntity.ok(savedNote);
     }
@@ -66,6 +83,19 @@ public class NoteController {
             note.setSubject(noteDetails.getSubject());
             note.setCategory(noteDetails.getCategory());
             note.setUpdatedAt(LocalDateTime.now());
+
+            // Handle folder association if provided
+            if (noteDetails.getFolder() != null && noteDetails.getFolder().getId() != null) {
+                Optional<StudyFolder> folder = studyFolderRepository.findByIdAndUserId(
+                        noteDetails.getFolder().getId(), user.getId());
+                if (folder.isPresent()) {
+                    note.setFolder(folder.get());
+                } else {
+                    note.setFolder(null); // Invalid folder, set to null
+                }
+            } else {
+                note.setFolder(null); // No folder specified, set to null
+            }
 
             Note updatedNote = noteRepository.save(note);
             return ResponseEntity.ok(updatedNote);

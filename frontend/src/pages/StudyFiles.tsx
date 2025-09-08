@@ -44,7 +44,7 @@ interface StudyMaterial {
   id: number;
   fileName: string;
   originalName: string;
-  fileType: "PDF" | "PPTX";
+  fileType: "PDF" | "PPTX" | "PPT";
   fileSize: number;
   createdAt: string;
   updatedAt: string;
@@ -119,6 +119,7 @@ const StudyFiles: React.FC = () => {
       case "PDF":
         return <PictureAsPdf color="error" />;
       case "PPTX":
+      case "PPT":
         return <Slideshow color="primary" />;
       default:
         return <PictureAsPdf />;

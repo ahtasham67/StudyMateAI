@@ -1,5 +1,6 @@
 package com.studymate.backend.service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -9,6 +10,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,9 +21,11 @@ import com.studymate.backend.dto.ReplyResponse;
 import com.studymate.backend.dto.ThreadResponse;
 import com.studymate.backend.model.DiscussionThread;
 import com.studymate.backend.model.KnowledgeEntity;
+import com.studymate.backend.model.ReplyKeyPhrase;
 import com.studymate.backend.model.ThreadReply;
 import com.studymate.backend.model.User;
 import com.studymate.backend.repository.DiscussionThreadRepository;
+import com.studymate.backend.repository.ReplyKeyPhraseRepository;
 import com.studymate.backend.repository.ThreadReplyRepository;
 
 @Service
@@ -35,10 +39,16 @@ public class DiscussionThreadService {
     private ThreadReplyRepository replyRepository;
 
     @Autowired
+    private ReplyKeyPhraseRepository replyKeyPhraseRepository;
+
+    @Autowired
     private DiscussionWebSocketService webSocketService;
 
     @Autowired
     private KnowledgeGraphService knowledgeGraphService;
+
+    @Autowired
+    private NLPKeyPhraseService nlpKeyPhraseService;
 
     // Thread Management
     public ThreadResponse createThread(CreateThreadRequest request, User author) {
@@ -63,6 +73,7 @@ public class DiscussionThreadService {
         return threadResponse;
     }
 
+    @Transactional(readOnly = true)
     public Page<ThreadResponse> getAllThreads(int page, int size, String sortBy, String sortDirection) {
         Sort sort = Sort.by(Sort.Direction.fromString(sortDirection), sortBy);
         Pageable pageable = PageRequest.of(page, size, sort);
@@ -71,18 +82,21 @@ public class DiscussionThreadService {
                 .map(this::convertToThreadResponse);
     }
 
+    @Transactional(readOnly = true)
     public Page<ThreadResponse> getThreadsByCourse(String course, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         return threadRepository.findByCourseOrderByLastActivityAtDesc(course, pageable)
                 .map(this::convertToThreadResponse);
     }
 
+    @Transactional(readOnly = true)
     public Page<ThreadResponse> getThreadsByTopic(String topic, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         return threadRepository.findByTopicOrderByLastActivityAtDesc(topic, pageable)
                 .map(this::convertToThreadResponse);
     }
 
+    @Transactional(readOnly = true)
     public Page<ThreadResponse> getThreadsByCourseAndTopic(String course, String topic, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         return threadRepository.findByCourseAndTopicOrderByLastActivityAtDesc(course, topic, pageable)
@@ -152,8 +166,9 @@ public class DiscussionThreadService {
                 .map(this::convertToThreadResponse);
     }
 
-    // Reply Management
+    // Reply Management - Optimized for performance
     public ReplyResponse createReply(Long threadId, CreateReplyRequest request, User author) {
+        // Fast path: Get thread and validate
         Optional<DiscussionThread> threadOpt = threadRepository.findById(threadId);
         if (threadOpt.isEmpty()) {
             throw new RuntimeException("Thread not found");
@@ -164,6 +179,7 @@ public class DiscussionThreadService {
             throw new RuntimeException("Thread is locked");
         }
 
+        // Quick parent reply validation if needed
         ThreadReply parentReply = null;
         if (request.getParentReplyId() != null) {
             Optional<ThreadReply> parentOpt = replyRepository.findById(request.getParentReplyId());
@@ -173,24 +189,111 @@ public class DiscussionThreadService {
             parentReply = parentOpt.get();
         }
 
+        // Create and save reply immediately (fast operation)
         ThreadReply reply = new ThreadReply(request.getContent(), thread, author, parentReply);
         ThreadReply savedReply = replyRepository.save(reply);
 
-        // Update thread reply count and last activity
+        // Quick thread update (minimal database operation)
         thread.incrementReplyCount();
-
-        // Process the new reply for knowledge graph extraction
-        knowledgeGraphService.processReplyForKnowledgeGraph(thread, request.getContent());
-
-        // Save the updated thread with new knowledge entities
         threadRepository.save(thread);
 
+        // Convert to response early
         ReplyResponse replyResponse = convertToReplyResponse(savedReply);
 
-        // Broadcast reply creation to all users
+        // Quick broadcast to users
         webSocketService.broadcastReplyCreated(threadId, replyResponse);
 
+        // ASYNC OPERATIONS - Don't block the response
+        // Process NLP and knowledge graph separately to maximize parallelism
+        processNLPAsync(request.getContent(), savedReply);
+        processKnowledgeGraphAsync(thread, request.getContent());
+
         return replyResponse;
+    }
+
+    // Asynchronous processing method for expensive operations
+    @Async("replyProcessingExecutor")
+    public void processReplyAsync(DiscussionThread thread, String content, ThreadReply reply) {
+        try {
+            // Process NLP key phrases asynchronously
+            processNLPAsync(content, reply);
+
+            // Process knowledge graph asynchronously
+            processKnowledgeGraphAsync(thread, content);
+
+        } catch (Exception e) {
+            // Log error but don't fail the reply creation
+            System.err.println("Error in async reply processing: " + e.getMessage());
+        }
+    }
+
+    // Separate async method for NLP processing
+    @Async("nlpProcessingExecutor")
+    public void processNLPAsync(String content, ThreadReply reply) {
+        try {
+            extractAndSaveKeyPhrases(content, reply);
+        } catch (Exception e) {
+            System.err.println("Error in async NLP processing: " + e.getMessage());
+        }
+    }
+
+    // Separate async method for knowledge graph processing
+    @Async("replyProcessingExecutor")
+    public void processKnowledgeGraphAsync(DiscussionThread thread, String content) {
+        try {
+            knowledgeGraphService.processReplyForKnowledgeGraph(thread, content);
+            threadRepository.save(thread);
+        } catch (Exception e) {
+            System.err.println("Error in async knowledge graph processing: " + e.getMessage());
+        }
+    }
+
+    // NLP Key Phrase Extraction - Optimized for performance
+    private void extractAndSaveKeyPhrases(String content, ThreadReply reply) {
+        try {
+            // Skip NLP processing for very short content
+            if (content == null || content.trim().length() < 20) {
+                return;
+            }
+
+            // Limit content length to avoid excessive processing time
+            String processableContent = content.length() > 2000 ? content.substring(0, 2000) + "..." : content;
+
+            // Use Stanford NLP for key phrase extraction
+            List<String> keyPhrases = nlpKeyPhraseService.extractKeyPhrases(processableContent);
+
+            // Limit the number of key phrases to save
+            List<String> limitedKeyPhrases = keyPhrases.stream()
+                    .limit(15) // Only save top 15 key phrases
+                    .collect(Collectors.toList());
+
+            // Batch save key phrases to reduce database calls
+            List<ReplyKeyPhrase> keyPhrasesToSave = new ArrayList<>();
+
+            for (String keyPhrase : limitedKeyPhrases) {
+                // Check if this key phrase already exists for this reply
+                Optional<ReplyKeyPhrase> existingKeyPhrase = replyKeyPhraseRepository.findByKeyPhraseAndReply(keyPhrase,
+                        reply);
+
+                if (existingKeyPhrase.isPresent()) {
+                    // Increment frequency if it already exists
+                    existingKeyPhrase.get().incrementFrequency();
+                    keyPhrasesToSave.add(existingKeyPhrase.get());
+                } else {
+                    // Create new key phrase entry
+                    ReplyKeyPhrase newKeyPhrase = new ReplyKeyPhrase(keyPhrase, reply);
+                    keyPhrasesToSave.add(newKeyPhrase);
+                }
+            }
+
+            // Batch save all key phrases
+            replyKeyPhraseRepository.saveAll(keyPhrasesToSave);
+
+            System.out.println("Saved " + limitedKeyPhrases.size() + " key phrases for reply " + reply.getId());
+
+        } catch (Exception e) {
+            System.err.println("Error extracting and saving key phrases: " + e.getMessage());
+        }
     }
 
     public Page<ReplyResponse> getRepliesByThread(Long threadId, int page, int size) {

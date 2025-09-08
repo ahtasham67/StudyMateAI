@@ -34,6 +34,7 @@ public class StudyFolderService {
     /**
      * Get all root folders for a user
      */
+    @Transactional(readOnly = true)
     public List<StudyFolderDTO> getRootFolders(Long userId) {
         logger.info("Getting root folders for user {}", userId);
         List<StudyFolder> folders = studyFolderRepository.findByUserIdAndParentFolderIsNull(userId);
@@ -45,6 +46,7 @@ public class StudyFolderService {
     /**
      * Get folder by ID with contents
      */
+    @Transactional(readOnly = true)
     public Optional<StudyFolderDTO> getFolderWithContents(Long folderId, Long userId) {
         logger.info("Getting folder {} with contents for user {}", folderId, userId);
         Optional<StudyFolder> folderOpt = studyFolderRepository.findByIdWithContentsAndUserId(folderId, userId);
@@ -54,6 +56,7 @@ public class StudyFolderService {
     /**
      * Get folder hierarchy (breadcrumbs)
      */
+    @Transactional(readOnly = true)
     public List<StudyFolderDTO> getFolderHierarchy(Long folderId, Long userId) {
         logger.info("Getting folder hierarchy for folder {} and user {}", folderId, userId);
 
