@@ -322,6 +322,7 @@ cd frontend && npm run build
 Deploy your StudyMateAI application to Render with Supabase database in just a few steps!
 
 ### Prerequisites
+
 - **Render Account**: [Sign up at render.com](https://render.com)
 - **Supabase Database**: Already configured ✅
 - **GitHub Repository**: Code pushed to GitHub
@@ -330,14 +331,17 @@ Deploy your StudyMateAI application to Render with Supabase database in just a f
 ### 🎯 Quick Deploy (Recommended)
 
 #### Option 1: One-Click Deploy with Blueprint
+
 1. **Fork/Clone** this repository to your GitHub account
 2. **Connect to Render**:
+
    - Go to [Render Dashboard](https://dashboard.render.com)
    - Click "New" → "Blueprint"
    - Connect your GitHub repository
    - Select the `StudyMateAI` repository
 
 3. **Configure Environment Variables**:
+
    ```bash
    # REQUIRED: Add these in Render Dashboard
    GEMINI_API_KEY=your_gemini_api_key_here
@@ -348,7 +352,9 @@ Deploy your StudyMateAI application to Render with Supabase database in just a f
 #### Option 2: Manual Service Creation
 
 ##### Backend Service Setup
+
 1. **Create Web Service**:
+
    - Go to Render Dashboard → "New" → "Web Service"
    - Connect your GitHub repository
    - **Name**: `studymate-backend`
@@ -358,10 +364,11 @@ Deploy your StudyMateAI application to Render with Supabase database in just a f
    - **Dockerfile Path**: `./backend/Dockerfile`
 
 2. **Environment Variables**:
+
    ```bash
    # Required
    GEMINI_API_KEY=your_gemini_api_key_here
-   
+
    # Auto-configured
    PORT=8080
    SPRING_PROFILES_ACTIVE=production
@@ -373,7 +380,9 @@ Deploy your StudyMateAI application to Render with Supabase database in just a f
    - **Health Check Path**: `/actuator/health`
 
 ##### Frontend Service Setup
+
 1. **Create Web Service**:
+
    - Name: `studymate-frontend`
    - Runtime: `Docker`
    - Dockerfile Path: `./frontend/Dockerfile`
@@ -390,11 +399,11 @@ Deploy your StudyMateAI application to Render with Supabase database in just a f
 
 #### Required Environment Variables
 
-| Variable | Service | Value | Notes |
-|----------|---------|-------|-------|
-| `GEMINI_API_KEY` | Backend | Your API key | Get from Google AI Studio |
-| `JWT_SECRET` | Backend | Auto-generated | Render will generate this |
-| `REACT_APP_API_URL` | Frontend | Backend URL | Auto-populated by Render |
+| Variable            | Service  | Value          | Notes                     |
+| ------------------- | -------- | -------------- | ------------------------- |
+| `GEMINI_API_KEY`    | Backend  | Your API key   | Get from Google AI Studio |
+| `JWT_SECRET`        | Backend  | Auto-generated | Render will generate this |
+| `REACT_APP_API_URL` | Frontend | Backend URL    | Auto-populated by Render  |
 
 #### Optional Customizations
 
@@ -414,6 +423,7 @@ CORS_ALLOWED_ORIGINS=https://your-frontend.onrender.com
 ### 🔐 Security Configuration
 
 #### 1. Get Gemini API Key
+
 ```bash
 # Visit Google AI Studio
 https://aistudio.google.com/
@@ -423,6 +433,7 @@ https://aistudio.google.com/
 ```
 
 #### 2. Configure Environment Variables in Render
+
 ```bash
 # Go to your service → Environment
 # Add variables marked as "Required" in .env.template
@@ -432,16 +443,19 @@ https://aistudio.google.com/
 ### 📊 Monitoring & Health Checks
 
 #### Backend Health Check
+
 - **Endpoint**: `/actuator/health`
 - **Expected Response**: `200 OK`
 - **Monitors**: Database connectivity, application status
 
 #### Frontend Health Check
+
 - **Endpoint**: `/health`
 - **Expected Response**: `200 OK`
 - **Monitors**: Nginx server status
 
 #### View Logs
+
 ```bash
 # In Render Dashboard
 # Go to Service → Logs
@@ -452,12 +466,14 @@ https://aistudio.google.com/
 ### 🔄 Deployment Process
 
 #### Automatic Deployment
+
 1. **Push to GitHub**: Changes trigger automatic deployment
 2. **Build Process**: Render builds Docker images
 3. **Health Checks**: Services start after successful health checks
 4. **Live Update**: Zero-downtime deployment
 
 #### Manual Deployment
+
 ```bash
 # In Render Dashboard
 # Go to Service → Settings
@@ -467,11 +483,12 @@ https://aistudio.google.com/
 ### 🎯 Access Your Application
 
 #### Service URLs
+
 ```bash
 # Backend API
 https://studymate-backend.onrender.com
 
-# Frontend Application  
+# Frontend Application
 https://studymate-frontend.onrender.com
 
 # API Health Check
@@ -479,6 +496,7 @@ https://studymate-backend.onrender.com/actuator/health
 ```
 
 #### API Testing
+
 ```bash
 # Test authentication endpoint
 curl https://studymate-backend.onrender.com/api/auth/me
@@ -492,6 +510,7 @@ curl https://studymate-backend.onrender.com/actuator/health
 #### Common Issues
 
 1. **Build Failures**
+
    ```bash
    # Check Dockerfile syntax
    # Verify Java/Node versions
@@ -499,6 +518,7 @@ curl https://studymate-backend.onrender.com/actuator/health
    ```
 
 2. **Environment Variable Issues**
+
    ```bash
    # Verify GEMINI_API_KEY is set
    # Check database connection strings
@@ -506,6 +526,7 @@ curl https://studymate-backend.onrender.com/actuator/health
    ```
 
 3. **Database Connection Issues**
+
    ```bash
    # Verify Supabase credentials
    # Check connection pool settings
@@ -520,6 +541,7 @@ curl https://studymate-backend.onrender.com/actuator/health
    ```
 
 #### Debug Commands
+
 ```bash
 # View environment variables
 echo $GEMINI_API_KEY
@@ -534,11 +556,13 @@ curl -X GET https://studymate-backend.onrender.com/actuator/health
 ### 📈 Performance Optimization
 
 #### Backend Optimizations
+
 - **JVM Settings**: Optimized for containerized environments
 - **Connection Pooling**: Configured for Render infrastructure
 - **Health Checks**: Minimal overhead monitoring
 
 #### Frontend Optimizations
+
 - **Nginx Compression**: Gzip enabled for all assets
 - **Static Caching**: Long-term caching for assets
 - **Bundle Optimization**: Production builds minimized
@@ -546,11 +570,13 @@ curl -X GET https://studymate-backend.onrender.com/actuator/health
 ### 💰 Cost Management
 
 #### Render Pricing Tiers
+
 - **Starter Plan**: $7/month per service (Recommended)
 - **Standard Plan**: $25/month per service (High traffic)
 - **Pro Plan**: $85/month per service (Enterprise)
 
 #### Cost Optimization Tips
+
 ```bash
 # Use Starter plans for development
 # Monitor resource usage in dashboard
@@ -561,6 +587,7 @@ curl -X GET https://studymate-backend.onrender.com/actuator/health
 ### 🔄 Continuous Integration
 
 #### GitHub Actions (Optional)
+
 ```yaml
 # .github/workflows/deploy.yml
 name: Deploy to Render
@@ -618,6 +645,7 @@ jobs:
 - **Study Patterns**: AI-driven learning behavior analysis
 
 ## 🆘 Support & Documentation
+
 - **Discussions**: [GitHub Discussions](https://github.com/ahtasham67/StudyMateAI/discussions)
 
 **Built for the future of education** 🎓✨
