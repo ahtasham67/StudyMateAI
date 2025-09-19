@@ -5,6 +5,7 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -25,6 +26,9 @@ public class KnowledgeGraphService {
     @Autowired
     private KnowledgeEntityRepository entityRepository;
 
+    @Autowired
+    private NLPService nlpService;
+
     // Pre-defined knowledge patterns for different subjects
     private static final Map<String, List<String>> DOMAIN_KEYWORDS = Map.of(
             "COMPUTER_SCIENCE",
@@ -43,27 +47,124 @@ public class KnowledgeGraphService {
                     "ecosystem", "species"));
 
     /**
-     * Extract knowledge entities from thread content
+     * Extract knowledge entities from thread content and its replies
      */
     public Set<KnowledgeEntity> extractEntitiesFromThread(DiscussionThread thread) {
         Set<KnowledgeEntity> entities = new HashSet<>();
-        String content = thread.getTitle() + " " + thread.getContent();
 
-        // Extract technical terms and concepts
-        entities.addAll(extractTechnicalTerms(content, thread.getCourse()));
+        // Combine thread content with all reply content
+        StringBuilder allContent = new StringBuilder();
+        allContent.append(thread.getTitle()).append(" ").append(thread.getContent());
 
-        // Extract named entities (proper nouns, concepts)
-        entities.addAll(extractNamedEntities(content));
+        // Add content from all replies
+        if (thread.getReplies() != null && !thread.getReplies().isEmpty()) {
+            for (var reply : thread.getReplies()) {
+                if (reply.getContent() != null && !reply.getIsDeleted()) {
+                    allContent.append(" ").append(reply.getContent());
+                }
+            }
+        }
 
-        // Extract course-specific concepts
-        entities.addAll(extractCourseSpecificConcepts(content, thread.getCourse()));
+        String combinedContent = allContent.toString();
+
+        // Use NLP service for entity extraction
+        if (nlpService != null) {
+            try {
+                entities.addAll(nlpService.extractNamedEntities(combinedContent, thread.getCourse()));
+
+                // Extract key phrases using NLP
+                Set<String> keyPhrases = nlpService.extractKeyPhrases(combinedContent);
+                for (String phrase : keyPhrases) {
+                    System.out.println("Extracted key phrase: " + phrase);
+
+                    entities.add(new KnowledgeEntity(phrase, "KEY_PHRASE",
+                            "Key phrase from " + thread.getCourse(), 0.7));
+                }
+            } catch (Exception e) {
+                System.err.println("NLP service failed, falling back to simple extraction: " + e.getMessage());
+                entities.addAll(extractEntitiesSimple(combinedContent, thread.getCourse()));
+            }
+        } else {
+            // Fallback to simple extraction methods
+            entities.addAll(extractEntitiesSimple(combinedContent, thread.getCourse()));
+        }
 
         return entities;
     }
 
     /**
-     * Generate AI summary based on knowledge entities
+     * Simple entity extraction fallback method
      */
+    private Set<KnowledgeEntity> extractEntitiesSimple(String content, String course) {
+        Set<KnowledgeEntity> entities = new HashSet<>();
+
+        // Extract technical terms and concepts from combined content
+        entities.addAll(extractTechnicalTerms(content, course));
+
+        // Extract named entities (proper nouns, concepts)
+        entities.addAll(extractNamedEntities(content));
+
+        // Extract course-specific concepts
+        entities.addAll(extractCourseSpecificConcepts(content, course));
+
+        return entities;
+    }
+
+    /**
+     * Extract knowledge entities from a single reply
+     */
+    public Set<KnowledgeEntity> extractEntitiesFromReply(String replyContent, String course) {
+        Set<KnowledgeEntity> entities = new HashSet<>();
+
+        if (replyContent == null || replyContent.trim().isEmpty()) {
+            return entities;
+        }
+
+        // Use NLP service for entity extraction
+        if (nlpService != null) {
+            try {
+                entities.addAll(nlpService.extractNamedEntities(replyContent, course));
+
+                // Extract key phrases
+                Set<String> keyPhrases = nlpService.extractKeyPhrases(replyContent);
+                for (String phrase : keyPhrases) {
+                    System.out.println("Extracted key phrase: " + phrase);
+                    entities.add(new KnowledgeEntity(phrase, "KEY_PHRASE",
+                            "Key phrase from reply in " + course, 0.6));
+                }
+            } catch (Exception e) {
+                System.err.println("NLP service failed for reply, using simple extraction: " + e.getMessage());
+                entities.addAll(extractEntitiesSimpleFromReply(replyContent, course));
+            }
+        } else {
+            entities.addAll(extractEntitiesSimpleFromReply(replyContent, course));
+        }
+
+        return entities;
+    }
+
+    /**
+     * Simple entity extraction from reply fallback
+     */
+    private Set<KnowledgeEntity> extractEntitiesSimpleFromReply(String replyContent, String course) {
+        Set<KnowledgeEntity> entities = new HashSet<>();
+
+        // Extract technical terms and concepts
+        entities.addAll(extractTechnicalTerms(replyContent, course));
+
+        // Extract named entities (proper nouns, concepts)
+        entities.addAll(extractNamedEntities(replyContent));
+
+        // Extract course-specific concepts
+        entities.addAll(extractCourseSpecificConcepts(replyContent, course));
+
+        return entities;
+    }
+
+    /**
+     * Generate AI summary based on knowledge entities from thread and replies
+     */
+    @Transactional(readOnly = true)
     public String generateKnowledgeSummary(DiscussionThread thread) {
         Set<KnowledgeEntity> entities = thread.getKnowledgeEntities();
         if (entities.isEmpty()) {
@@ -88,8 +189,40 @@ public class KnowledgeGraphService {
             summary.append(String.join(", ", concepts));
         }
 
-        summary.append("\n\n**Summary:** ");
+        // Add key phrases if available
+        if (entityGroups.containsKey("KEY_PHRASE")) {
+            List<String> keyPhrases = entityGroups.get("KEY_PHRASE").stream()
+                    .sorted((a, b) -> Double.compare(b.getConfidenceScore(), a.getConfidenceScore()))
+                    .limit(2)
+                    .map(KnowledgeEntity::getName)
+                    .collect(Collectors.toList());
+            if (!keyPhrases.isEmpty()) {
+                summary.append(", ").append(String.join(", ", keyPhrases));
+            }
+        }
+
+        summary.append("\n\n**Discussion Summary:** ");
         summary.append(generateBasicSummary(thread));
+
+        // Add sentiment analysis if NLP service is available
+        if (nlpService != null) {
+            try {
+                String sentiment = nlpService.analyzeSentiment(thread.getContent());
+                summary.append("\n\n**Discussion Tone:** ").append(sentiment);
+            } catch (Exception e) {
+                // Ignore sentiment analysis errors
+            }
+        }
+
+        // Add reply insights if there are replies
+        if (thread.getReplies() != null && !thread.getReplies().isEmpty()) {
+            int activeReplies = (int) thread.getReplies().stream()
+                    .filter(reply -> !reply.getIsDeleted())
+                    .count();
+            summary.append("\n\n**Discussion Activity:** ");
+            summary.append("This thread has generated ").append(activeReplies)
+                    .append(" replies, indicating active community engagement on this topic.");
+        }
 
         // Add related knowledge
         summary.append("\n\n**Related Topics:** ");
@@ -100,6 +233,8 @@ public class KnowledgeGraphService {
                     .map(KnowledgeEntity::getName)
                     .collect(Collectors.toList());
             summary.append(String.join(", ", relatedNames));
+        } else {
+            summary.append("No strongly related topics found yet.");
         }
 
         return summary.toString();
@@ -144,36 +279,68 @@ public class KnowledgeGraphService {
     }
 
     /**
-     * Process thread and update knowledge graph
+     * Process thread and update knowledge graph - Optimized for performance
      */
     @Transactional
     public void processThreadForKnowledgeGraph(DiscussionThread thread) {
         // Extract entities
         Set<KnowledgeEntity> extractedEntities = extractEntitiesFromThread(thread);
 
-        // Save or update entities
-        Set<KnowledgeEntity> persistedEntities = new HashSet<>();
-        for (KnowledgeEntity entity : extractedEntities) {
-            KnowledgeEntity existingEntity = entityRepository.findByNameIgnoreCase(entity.getName())
-                    .orElse(null);
+        if (extractedEntities.isEmpty()) {
+            return; // Early exit if no entities found
+        }
 
-            if (existingEntity != null) {
-                existingEntity.incrementFrequency();
-                existingEntity.getRelatedThreads().add(thread);
-                persistedEntities.add(entityRepository.save(existingEntity));
-            } else {
-                entity.getRelatedThreads().add(thread);
-                persistedEntities.add(entityRepository.save(entity));
-            }
+        // Process entities one by one to handle duplicates gracefully
+        List<KnowledgeEntity> allSavedEntities = new ArrayList<>();
+
+        for (KnowledgeEntity entity : extractedEntities) {
+            KnowledgeEntity savedEntity = findOrCreateEntity(entity, thread);
+            allSavedEntities.add(savedEntity);
         }
 
         // Update thread with entities
-        thread.setKnowledgeEntities(persistedEntities);
+        thread.setKnowledgeEntities(new HashSet<>(allSavedEntities));
         thread.setKnowledgeScore(calculateKnowledgeScore(thread));
         thread.setAiGeneratedSummary(generateKnowledgeSummary(thread));
 
-        // Create entity relationships
+        // Create entity relationships (limit to avoid excessive processing)
+        if (allSavedEntities.size() <= 10) {
+            createEntityRelationships(new HashSet<>(allSavedEntities));
+        }
+    }
+
+    /**
+     * Process a new reply and update knowledge graph incrementally
+     */
+    @Transactional
+    public void processReplyForKnowledgeGraph(DiscussionThread thread, String replyContent) {
+        // Extract entities from the new reply
+        Set<KnowledgeEntity> replyEntities = extractEntitiesFromReply(replyContent, thread.getCourse());
+
+        if (replyEntities.isEmpty()) {
+            return;
+        }
+
+        // Save or update entities using the same duplicate-safe method
+        Set<KnowledgeEntity> persistedEntities = new HashSet<>();
+        for (KnowledgeEntity entity : replyEntities) {
+            KnowledgeEntity savedEntity = findOrCreateEntity(entity, thread);
+            persistedEntities.add(savedEntity);
+        }
+
+        // Add new entities to thread's existing entities
+        thread.getKnowledgeEntities().addAll(persistedEntities);
+
+        // Recalculate knowledge score and summary
+        thread.setKnowledgeScore(calculateKnowledgeScore(thread));
+        thread.setAiGeneratedSummary(generateKnowledgeSummary(thread));
+
+        // Create relationships with existing entities
         createEntityRelationships(persistedEntities);
+
+        // Create relationships between new entities and existing thread entities
+        Set<KnowledgeEntity> allThreadEntities = new HashSet<>(thread.getKnowledgeEntities());
+        createEntityRelationships(allThreadEntities);
     }
 
     // Private helper methods
@@ -276,7 +443,27 @@ public class KnowledgeGraphService {
 
     private String generateBasicSummary(DiscussionThread thread) {
         String content = thread.getContent();
-        if (content.length() <= 200) {
+
+        // If thread has replies, create a more comprehensive summary
+        if (thread.getReplies() != null && !thread.getReplies().isEmpty()) {
+            StringBuilder combinedContent = new StringBuilder(content);
+
+            // Add key points from replies (limit to first few replies to avoid too much
+            // text)
+            thread.getReplies().stream()
+                    .filter(reply -> !reply.getIsDeleted())
+                    .limit(3) // Only consider first 3 replies for summary
+                    .forEach(reply -> {
+                        if (reply.getContent().length() > 50) { // Only include substantial replies
+                            combinedContent.append(" ").append(reply.getContent().substring(0,
+                                    Math.min(100, reply.getContent().length()))); // First 100 chars
+                        }
+                    });
+
+            content = combinedContent.toString();
+        }
+
+        if (content.length() <= 250) {
             return content;
         }
 
@@ -286,7 +473,7 @@ public class KnowledgeGraphService {
             return sentences[0] + ". " + sentences[1] + ".";
         }
 
-        return content.substring(0, 200) + "...";
+        return content.substring(0, 250) + "...";
     }
 
     private Set<KnowledgeEntity> findRelatedEntities(Set<KnowledgeEntity> entities) {
@@ -320,6 +507,7 @@ public class KnowledgeGraphService {
     /**
      * Generate AI-powered summary for a specific topic/query
      */
+    @Transactional(readOnly = true)
     public String generateTopicSummary(String query) {
         // Find entities related to the query
         List<KnowledgeEntity> relatedEntities = entityRepository.findByNameContainingIgnoreCase(query);
@@ -335,34 +523,45 @@ public class KnowledgeGraphService {
                 .max(Comparator.comparing(KnowledgeEntity::getConfidenceScore))
                 .orElse(relatedEntities.get(0));
 
+        // Start with a concise overview
         summary.append("**").append(primaryEntity.getName()).append("**\n\n");
 
         if (primaryEntity.getDescription() != null && !primaryEntity.getDescription().isEmpty()) {
-            summary.append(primaryEntity.getDescription()).append("\n\n");
+            // Limit description to first 150 characters for brevity
+            String description = primaryEntity.getDescription();
+            if (description.length() > 150) {
+                description = description.substring(0, 150) + "...";
+            }
+            summary.append(description).append("\n\n");
         }
 
-        // Add frequency and discussion context
-        summary.append("This topic has been discussed **")
+        // Community engagement summary - more concise
+        summary.append("💬 **Community Insights:** Discussed **")
                 .append(primaryEntity.getFrequencyCount())
-                .append(" times** across different threads with a confidence score of **")
+                .append(" times** with **")
                 .append(String.format("%.0f%%", primaryEntity.getConfidenceScore() * 100))
-                .append("**.\n\n");
+                .append("% confidence** from our community.\n\n");
 
-        // Add related concepts
+        // Add related concepts - limit to top 3 for brevity
         Set<KnowledgeEntity> related = primaryEntity.getRelatedEntities();
         if (!related.isEmpty()) {
-            summary.append("**Related Concepts:** ");
+            summary.append("🔗 **Key Related Topics:** ");
             List<String> relatedNames = related.stream()
-                    .limit(5)
+                    .limit(3) // Reduced from 5 to 3 for shorter display
                     .map(KnowledgeEntity::getName)
                     .collect(Collectors.toList());
-            summary.append(String.join(", ", relatedNames)).append("\n\n");
+            summary.append(String.join(", ", relatedNames));
+            if (related.size() > 3) {
+                summary.append(" and ").append(related.size() - 3).append(" more");
+            }
+            summary.append("\n\n");
         }
 
-        // Add domain-specific insights
+        // Add practical learning tip
         String domain = getDomainFromEntityType(primaryEntity.getEntityType());
-        summary.append("**Domain:** ").append(domain).append("\n");
-        summary.append("**Type:** ").append(primaryEntity.getEntityType());
+        summary.append("📚 **Study Tip:** This ").append(domain.toLowerCase())
+                .append(" concept is well-discussed in our community. ")
+                .append("Check related threads for practical examples and insights!");
 
         return summary.toString();
     }
@@ -397,6 +596,69 @@ public class KnowledgeGraphService {
                 "While this specific topic may not have been discussed extensively yet, it falls within a well-established academic domain. "
                 +
                 "Consider exploring related discussions or starting a new thread to dive deeper into this subject.";
+    }
+
+    /**
+     * Find existing entity or create new one, handling duplicates gracefully
+     */
+    private KnowledgeEntity findOrCreateEntity(KnowledgeEntity entity, DiscussionThread thread) {
+        // Use a retry mechanism with exponential backoff for handling concurrent access
+        int maxRetries = 3;
+        int retryCount = 0;
+
+        while (retryCount < maxRetries) {
+            try {
+                // First try to find existing entity (case-insensitive)
+                Optional<KnowledgeEntity> existingEntity = entityRepository.findByNameIgnoreCase(entity.getName());
+
+                if (existingEntity.isPresent()) {
+                    // Update existing entity
+                    KnowledgeEntity existing = existingEntity.get();
+                    existing.incrementFrequency();
+                    existing.getRelatedThreads().add(thread);
+                    return entityRepository.save(existing);
+                } else {
+                    // Create new entity
+                    entity.getRelatedThreads().add(thread);
+                    return entityRepository.save(entity);
+                }
+            } catch (Exception e) {
+                // Handle duplicate key constraint violation gracefully
+                if (e.getMessage() != null &&
+                        (e.getMessage().contains("duplicate key value violates unique constraint") ||
+                                e.getMessage().contains("uk_e2mnu0iy04q2kq9ufwv8voiw3"))) {
+
+                    retryCount++;
+                    if (retryCount >= maxRetries) {
+                        // Final attempt: try to find the entity that was created by another thread
+                        Optional<KnowledgeEntity> existingEntity = entityRepository
+                                .findByNameIgnoreCase(entity.getName());
+                        if (existingEntity.isPresent()) {
+                            KnowledgeEntity existing = existingEntity.get();
+                            existing.incrementFrequency();
+                            existing.getRelatedThreads().add(thread);
+                            return entityRepository.save(existing);
+                        } else {
+                            System.err.println("Failed to handle duplicate entity after " + maxRetries +
+                                    " retries for: " + entity.getName());
+                            return entity; // Return without persisting to avoid infinite loops
+                        }
+                    }
+
+                    // Wait a bit before retrying (exponential backoff)
+                    try {
+                        Thread.sleep(10 * retryCount);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        throw new RuntimeException("Interrupted while handling duplicate entity", ie);
+                    }
+                } else {
+                    throw e; // Re-throw if it's a different error
+                }
+            }
+        }
+
+        return entity; // Should never reach here
     }
 
     private String getDomainFromEntityType(String entityType) {

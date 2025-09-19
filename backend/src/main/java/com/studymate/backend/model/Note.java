@@ -49,6 +49,11 @@ public class Note {
     @JsonIgnore
     private User user;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "folder_id")
+    @JsonIgnore
+    private StudyFolder folder;
+
     // Constructors
     public Note() {
         this.createdAt = LocalDateTime.now();
@@ -126,6 +131,14 @@ public class Note {
 
     public void setUser(User user) {
         this.user = user;
+    }
+
+    public StudyFolder getFolder() {
+        return folder;
+    }
+
+    public void setFolder(StudyFolder folder) {
+        this.folder = folder;
     }
 
     @PreUpdate

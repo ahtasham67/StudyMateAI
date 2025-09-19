@@ -6,6 +6,7 @@ import {
   LocationOn,
   Phone,
   Twitter,
+  YouTube,
 } from "@mui/icons-material";
 import {
   Box,
@@ -117,6 +118,22 @@ const Footer: React.FC = () => {
                 >
                   <Twitter />
                 </IconButton>
+                <IconButton
+                  component="a"
+                  href="https://youtube.com/@ahtashamulhaque3831?si=4WGoPL474t8BEhCG"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  sx={{
+                    color: "#bb86fc",
+                    "&:hover": {
+                      color: "#03dac6",
+                      transform: "translateY(-2px)",
+                      transition: "all 0.3s ease",
+                    },
+                  }}
+                >
+                  <YouTube />
+                </IconButton>
               </Box>
             </Box>
 
@@ -224,14 +241,15 @@ const Footer: React.FC = () => {
                 </Box>
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                   <Phone sx={{ color: "#03dac6", fontSize: "1.2rem" }} />
-                  <Typography variant="body2" color="text.secondary">
-                    +1 (555) 123-4567
-                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                  ></Typography>
                 </Box>
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                   <LocationOn sx={{ color: "#03dac6", fontSize: "1.2rem" }} />
                   <Typography variant="body2" color="text.secondary">
-                    San Francisco, CA
+                    Dhaka, Bangladesh
                   </Typography>
                 </Box>
               </Box>

@@ -6,9 +6,12 @@ import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.studymate.backend.model.StudyFolder;
 import com.studymate.backend.model.StudyMaterial;
+import com.studymate.backend.repository.StudyFolderRepository;
 import com.studymate.backend.repository.StudyMaterialRepository;
 
 @Service
@@ -17,9 +20,17 @@ public class StudyMaterialService {
     @Autowired
     private StudyMaterialRepository studyMaterialRepository;
 
+    @Autowired
+    private StudyFolderRepository studyFolderRepository;
+
     private static final long MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
     public StudyMaterial saveFile(MultipartFile file, String subject, String description, Long userId)
+            throws IOException {
+        return saveFile(file, subject, description, null, userId);
+    }
+
+    public StudyMaterial saveFile(MultipartFile file, String subject, String description, Long folderId, Long userId)
             throws IOException {
         // Validate file
         validateFile(file);
@@ -32,6 +43,13 @@ public class StudyMaterialService {
         // Determine file type
         StudyMaterial.FileType fileType = determineFileType(fileExtension);
 
+        // Validate folder ownership if folderId is provided
+        StudyFolder folder = null;
+        if (folderId != null) {
+            folder = studyFolderRepository.findByIdAndUserId(folderId, userId)
+                    .orElseThrow(() -> new IllegalArgumentException("Folder not found or access denied"));
+        }
+
         // Create StudyMaterial entity
         StudyMaterial studyMaterial = new StudyMaterial();
         studyMaterial.setFileName(uniqueFilename);
@@ -42,14 +60,17 @@ public class StudyMaterialService {
         studyMaterial.setSubject(subject != null ? subject : "");
         studyMaterial.setDescription(description != null ? description : "");
         studyMaterial.setUserId(userId);
+        studyMaterial.setFolder(folder);
 
         return studyMaterialRepository.save(studyMaterial);
     }
 
+    @Transactional(readOnly = true)
     public List<StudyMaterial> getUserMaterials(Long userId) {
         return studyMaterialRepository.findByUserIdOrderByCreatedAtDesc(userId);
     }
 
+    @Transactional(readOnly = true)
     public StudyMaterial getMaterialById(Long id, Long userId) {
         return studyMaterialRepository.findByIdAndUserId(id, userId).orElse(null);
     }
@@ -63,20 +84,34 @@ public class StudyMaterialService {
         return false;
     }
 
+    @Transactional(readOnly = true)
     public List<StudyMaterial> searchMaterials(String query, Long userId) {
         return studyMaterialRepository.searchByUserIdAndQuery(userId, query);
     }
 
+    @Transactional(readOnly = true)
     public List<StudyMaterial> getMaterialsBySubject(String subject, Long userId) {
         return studyMaterialRepository.findByUserIdAndSubjectContainingIgnoreCase(userId, subject);
     }
 
+    @Transactional(readOnly = true)
     public List<StudyMaterial> getMaterialsByFileType(StudyMaterial.FileType fileType, Long userId) {
         return studyMaterialRepository.findByUserIdAndFileType(userId, fileType);
     }
 
+    @Transactional(readOnly = true)
     public long getUserMaterialCount(Long userId) {
         return studyMaterialRepository.countByUserId(userId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<StudyMaterial> getMaterialsInFolder(Long folderId, Long userId) {
+        return studyMaterialRepository.findByUserIdAndFolderIdOrderByCreatedAtDesc(userId, folderId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<StudyMaterial> getMaterialsWithoutFolder(Long userId) {
+        return studyMaterialRepository.findUnorganizedMaterialsWithFolder(userId);
     }
 
     private void validateFile(MultipartFile file) {

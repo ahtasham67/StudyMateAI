@@ -13,6 +13,7 @@ public class StudyMaterialResponse {
     private String category;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private StudyFolderDTO folder;
 
     // Constructors
     public StudyMaterialResponse() {
@@ -97,5 +98,13 @@ public class StudyMaterialResponse {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public StudyFolderDTO getFolder() {
+        return folder;
+    }
+
+    public void setFolder(StudyFolderDTO folder) {
+        this.folder = folder;
     }
 }

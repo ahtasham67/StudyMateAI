@@ -1,9 +1,12 @@
 import {
   Add,
+  Chat,
   Close,
   CloudUpload,
   Delete,
   Download,
+  Help,
+  MoreVert,
   PictureAsPdf,
   Quiz as QuizIcon,
   Search,
@@ -27,23 +30,28 @@ import {
   IconButton,
   InputLabel,
   LinearProgress,
+  Menu,
   MenuItem,
   Paper,
   Select,
+  Snackbar,
   TextField,
   Typography,
 } from "@mui/material";
 import React, { useEffect, useState } from "react";
+import HelpResourcesModal from "../components/HelpResourcesModal";
+import StudyMaterialChatbot from "../components/StudyMaterialChatbot";
 import { quizAPI, studyMaterialsAPI } from "../services/api";
 import { CreateQuizRequest } from "../types";
 
 interface StudyMaterial {
   id: number;
-  filename: string;
-  originalFilename: string;
-  fileType: "PDF" | "PPTX";
+  fileName: string;
+  originalName: string;
+  fileType: "PDF" | "PPTX" | "PPT";
   fileSize: number;
-  uploadDate: string;
+  createdAt: string;
+  updatedAt: string;
   subject?: string;
   description?: string;
 }
@@ -51,27 +59,48 @@ interface StudyMaterial {
 const StudyFiles: React.FC = () => {
   const [materials, setMaterials] = useState<StudyMaterial[]>([]);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [uploadDialog, setUploadDialog] = useState(false);
+  const [quizDialog, setQuizDialog] = useState(false);
+  const [chatbotOpen, setChatbotOpen] = useState(false);
+  const [helpModalOpen, setHelpModalOpen] = useState(false);
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
+  const [selectedMaterial, setSelectedMaterial] =
+    useState<StudyMaterial | null>(null);
+  const [generatingQuiz, setGeneratingQuiz] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Debug logging
+  console.log(
+    "StudyFiles component rendered with",
+    materials.length,
+    "materials"
+  );
+
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: "success" | "error";
+  }>({
+    open: false,
+    message: "",
+    severity: "success",
+  });
+
+  // Upload form state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
 
-  // Quiz generation states
-  const [quizDialog, setQuizDialog] = useState(false);
-  const [selectedMaterial, setSelectedMaterial] =
-    useState<StudyMaterial | null>(null);
+  // Quiz form state
   const [quizTitle, setQuizTitle] = useState("");
   const [quizDescription, setQuizDescription] = useState("");
-  const [numberOfQuestions, setNumberOfQuestions] = useState(10);
-  const [durationMinutes, setDurationMinutes] = useState(30);
+  const [numberOfQuestions, setNumberOfQuestions] = useState(5);
+  const [durationMinutes, setDurationMinutes] = useState(15);
   const [difficulty, setDifficulty] = useState<"EASY" | "MEDIUM" | "HARD">(
     "MEDIUM"
   );
-  const [generatingQuiz, setGeneratingQuiz] = useState(false);
 
   useEffect(() => {
     fetchMaterials();
@@ -83,177 +112,13 @@ const StudyFiles: React.FC = () => {
       const response = await studyMaterialsAPI.getAll();
       setMaterials(response.data);
       setError(null);
-    } catch (err) {
-      console.error("Error fetching materials:", err);
-      setError("Failed to load study materials");
+    } catch (error) {
+      console.error("Error fetching materials:", error);
+      setError("Failed to fetch study materials");
     } finally {
       setLoading(false);
     }
   };
-
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const fileType = file.type;
-      const fileName = file.name.toLowerCase();
-
-      if (fileType === "application/pdf" || fileName.endsWith(".pdf")) {
-        setSelectedFile(file);
-        setError(null);
-      } else if (
-        fileType ===
-          "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
-        fileType === "application/vnd.ms-powerpoint" ||
-        fileName.endsWith(".pptx") ||
-        fileName.endsWith(".ppt")
-      ) {
-        setSelectedFile(file);
-        setError(null);
-      } else {
-        setError("Please select a PDF or PPTX file");
-        setSelectedFile(null);
-      }
-    }
-  };
-
-  const handleUpload = async () => {
-    if (!selectedFile) return;
-
-    try {
-      setUploading(true);
-      setError(null);
-
-      const formData = new FormData();
-      formData.append("file", selectedFile);
-      formData.append("subject", subject);
-      formData.append("description", description);
-
-      await studyMaterialsAPI.upload(formData);
-      setSuccess("File uploaded successfully!");
-      setUploadDialog(false);
-      resetUploadForm();
-      fetchMaterials();
-    } catch (err) {
-      console.error("Upload error:", err);
-      setError(err instanceof Error ? err.message : "Upload failed");
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleDownload = async (material: StudyMaterial) => {
-    try {
-      const response = await studyMaterialsAPI.download(material.id);
-      const blob = response.data;
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = material.originalFilename;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (err) {
-      console.error("Download error:", err);
-      setError("Failed to download file");
-    }
-  };
-
-  const handleDelete = async (materialId: number) => {
-    if (!window.confirm("Are you sure you want to delete this material?")) {
-      return;
-    }
-
-    try {
-      await studyMaterialsAPI.delete(materialId);
-      setSuccess("Material deleted successfully!");
-      fetchMaterials();
-    } catch (err) {
-      console.error("Delete error:", err);
-      setError("Failed to delete material");
-    }
-  };
-
-  const resetUploadForm = () => {
-    setSelectedFile(null);
-    setSubject("");
-    setDescription("");
-  };
-
-  const handleGenerateQuiz = (material: StudyMaterial) => {
-    setSelectedMaterial(material);
-    setQuizTitle(`Quiz: ${material.originalFilename}`);
-    setQuizDescription(`Generated quiz from ${material.originalFilename}`);
-    setQuizDialog(true);
-  };
-
-  const handleQuizGeneration = async () => {
-    if (!selectedMaterial) return;
-
-    try {
-      setGeneratingQuiz(true);
-      setError(null);
-
-      const request: CreateQuizRequest = {
-        title: quizTitle,
-        description: quizDescription,
-        studyMaterialId: selectedMaterial.id,
-        numberOfQuestions,
-        durationMinutes,
-        difficulty,
-      };
-
-      await quizAPI.generateQuiz(request);
-      setSuccess("Quiz generated successfully!");
-      setQuizDialog(false);
-      resetQuizForm();
-    } catch (err: any) {
-      console.error("Quiz generation error:", err);
-
-      // Provide specific error messages based on the error response
-      let errorMessage = "Failed to generate quiz. Please try again.";
-
-      if (err.response?.data?.message) {
-        errorMessage = err.response.data.message;
-      } else if (err.message) {
-        errorMessage = err.message;
-      }
-
-      // Handle specific AI service errors
-      if (errorMessage.includes("temporarily unavailable")) {
-        errorMessage =
-          "🤖 AI service is temporarily busy. Please try again in a few minutes.";
-      } else if (errorMessage.includes("rate limit")) {
-        errorMessage =
-          "⏱️ Too many requests. Please wait a moment before trying again.";
-      } else if (errorMessage.includes("API key")) {
-        errorMessage =
-          "🔑 AI service configuration issue. Please contact support.";
-      }
-
-      setError(errorMessage);
-    } finally {
-      setGeneratingQuiz(false);
-    }
-  };
-
-  const resetQuizForm = () => {
-    setSelectedMaterial(null);
-    setQuizTitle("");
-    setQuizDescription("");
-    setNumberOfQuestions(10);
-    setDurationMinutes(30);
-    setDifficulty("MEDIUM");
-  };
-
-  const filteredMaterials = materials.filter(
-    (material) =>
-      material.originalFilename
-        ?.toLowerCase()
-        ?.includes(searchTerm.toLowerCase()) ||
-      material.subject?.toLowerCase()?.includes(searchTerm.toLowerCase()) ||
-      material.description?.toLowerCase()?.includes(searchTerm.toLowerCase())
-  );
 
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return "0 Bytes";
@@ -264,41 +129,182 @@ const StudyFiles: React.FC = () => {
   };
 
   const getFileIcon = (fileType: string) => {
-    return fileType === "PDF" ? (
-      <PictureAsPdf color="error" />
-    ) : (
-      <Slideshow color="primary" />
-    );
+    switch (fileType) {
+      case "PDF":
+        return <PictureAsPdf color="error" />;
+      case "PPTX":
+      case "PPT":
+        return <Slideshow color="primary" />;
+      default:
+        return <PictureAsPdf />;
+    }
   };
+
+  const handleFileUpload = async () => {
+    if (!selectedFile) return;
+
+    try {
+      setUploading(true);
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      if (subject) formData.append("subject", subject);
+      if (description) formData.append("description", description);
+
+      await studyMaterialsAPI.upload(formData);
+      setUploadDialog(false);
+      setSelectedFile(null);
+      setSubject("");
+      setDescription("");
+      await fetchMaterials();
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      setError("Failed to upload file");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (window.confirm("Are you sure you want to delete this material?")) {
+      try {
+        await studyMaterialsAPI.delete(id);
+        await fetchMaterials();
+      } catch (error) {
+        console.error("Error deleting material:", error);
+        setError("Failed to delete material");
+      }
+    }
+  };
+
+  const handleDownload = async (material: StudyMaterial) => {
+    try {
+      const response = await studyMaterialsAPI.download(material.id);
+      const blob = new Blob([response.data]);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = material.originalName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error downloading file:", error);
+      setError("Failed to download file");
+    }
+  };
+
+  const handleGenerateQuiz = async () => {
+    if (!selectedMaterial) return;
+
+    try {
+      setGeneratingQuiz(true);
+      const quizRequest: CreateQuizRequest = {
+        studyMaterialId: selectedMaterial.id,
+        title: quizTitle,
+        description: quizDescription || "",
+        numberOfQuestions,
+        durationMinutes,
+        difficulty,
+      };
+
+      await quizAPI.generateQuiz(quizRequest);
+      setQuizDialog(false);
+      setQuizTitle("");
+      setQuizDescription("");
+      setSelectedMaterial(null);
+
+      // Show success notification
+      setSnackbar({
+        open: true,
+        message: "Quiz generated successfully!",
+        severity: "success",
+      });
+    } catch (error) {
+      console.error("Error generating quiz:", error);
+      setSnackbar({
+        open: true,
+        message: "Failed to generate quiz. Please try again.",
+        severity: "error",
+      });
+    } finally {
+      setGeneratingQuiz(false);
+    }
+  };
+
+  const handleOpenQuizDialog = (material: StudyMaterial) => {
+    setSelectedMaterial(material);
+    setQuizTitle(`Quiz - ${material.originalName}`);
+    setQuizDialog(true);
+  };
+
+  const handleOpenChatbot = (material: StudyMaterial) => {
+    setSelectedMaterial(material);
+    setChatbotOpen(true);
+  };
+
+  const handleOpenHelpModal = (material: StudyMaterial) => {
+    setSelectedMaterial(material);
+    setHelpModalOpen(true);
+  };
+
+  const handleMenuOpen = (
+    event: React.MouseEvent<HTMLElement>,
+    material: StudyMaterial
+  ) => {
+    setMenuAnchor(event.currentTarget);
+    setSelectedMaterial(material);
+  };
+
+  const handleMenuClose = () => {
+    setMenuAnchor(null);
+  };
+
+  const handleSnackbarClose = () => {
+    setSnackbar((prev) => ({ ...prev, open: false }));
+  };
+
+  const filteredMaterials = materials.filter(
+    (material) =>
+      material.originalName
+        ?.toLowerCase()
+        ?.includes(searchTerm.toLowerCase()) ||
+      material.subject?.toLowerCase()?.includes(searchTerm.toLowerCase()) ||
+      material.description?.toLowerCase()?.includes(searchTerm.toLowerCase())
+  );
+
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
+        <Typography
+          variant="h4"
+          component="h1"
+          gutterBottom
+          sx={{ color: "text.primary" }}
+        >
           Study Materials
         </Typography>
-        <Typography variant="body1" color="text.secondary" paragraph>
+        <Typography variant="body1" sx={{ color: "text.secondary" }} paragraph>
           Upload and manage your PDF documents and PowerPoint presentations for
           studying.
         </Typography>
       </Box>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
           {error}
         </Alert>
       )}
 
-      {success && (
-        <Alert
-          severity="success"
-          sx={{ mb: 2 }}
-          onClose={() => setSuccess(null)}
-        >
-          {success}
-        </Alert>
-      )}
-
-      <Box sx={{ mb: 3, display: "flex", gap: 2, alignItems: "center" }}>
+      <Box
+        sx={{
+          display: "flex",
+          gap: 2,
+          mb: 3,
+          flexWrap: "wrap",
+          alignItems: "center",
+        }}
+      >
         <Button
           variant="contained"
           startIcon={<Add />}
@@ -316,7 +322,7 @@ const StudyFiles: React.FC = () => {
           InputProps={{
             startAdornment: <Search sx={{ mr: 1, color: "text.secondary" }} />,
           }}
-          sx={{ flexGrow: 1, maxWidth: 400 }}
+          sx={{ flexGrow: 1, minWidth: 200 }}
         />
       </Box>
 
@@ -328,12 +334,15 @@ const StudyFiles: React.FC = () => {
         <Box>
           {filteredMaterials.length === 0 ? (
             <Paper sx={{ p: 4, textAlign: "center" }}>
-              <Typography variant="h6" color="text.secondary">
+              <Typography variant="h6" sx={{ color: "text.primary" }}>
                 {searchTerm
                   ? "No materials match your search"
                   : "No study materials uploaded yet"}
               </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              <Typography
+                variant="body2"
+                sx={{ color: "text.secondary", mt: 1 }}
+              >
                 {!searchTerm &&
                   "Upload your first PDF or PowerPoint file to get started!"}
               </Typography>
@@ -342,28 +351,25 @@ const StudyFiles: React.FC = () => {
             <Box
               sx={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
                 gap: 3,
+                gridTemplateColumns: {
+                  xs: "1fr",
+                  sm: "repeat(2, 1fr)",
+                  md: "repeat(3, 1fr)",
+                },
               }}
             >
               {filteredMaterials.map((material) => (
-                <Card
-                  key={material.id}
-                  sx={{
-                    height: "100%",
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <CardContent sx={{ flexGrow: 1 }}>
+                <Card key={material.id} elevation={2}>
+                  <CardContent>
                     <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
                       {getFileIcon(material.fileType)}
                       <Typography
                         variant="h6"
-                        sx={{ ml: 1, flexGrow: 1 }}
+                        sx={{ ml: 1, flexGrow: 1, color: "text.primary" }}
                         noWrap
                       >
-                        {material.originalFilename}
+                        {material.originalName}
                       </Typography>
                     </Box>
 
@@ -372,6 +378,7 @@ const StudyFiles: React.FC = () => {
                         label={material.subject}
                         size="small"
                         color="primary"
+                        variant="outlined"
                         sx={{ mb: 1 }}
                       />
                     )}
@@ -379,45 +386,83 @@ const StudyFiles: React.FC = () => {
                     {material.description && (
                       <Typography
                         variant="body2"
-                        color="text.secondary"
-                        sx={{ mb: 2 }}
+                        sx={{ mb: 2, color: "text.primary" }}
                       >
                         {material.description}
                       </Typography>
                     )}
 
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography
+                      variant="caption"
+                      sx={{ color: "text.secondary" }}
+                    >
                       Size: {formatFileSize(material.fileSize)}
                     </Typography>
                     <br />
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography
+                      variant="caption"
+                      sx={{ color: "text.secondary" }}
+                    >
                       Uploaded:{" "}
-                      {new Date(material.uploadDate).toLocaleDateString()}
+                      {new Date(material.createdAt).toLocaleDateString()}
                     </Typography>
                   </CardContent>
 
-                  <CardActions>
-                    <Button
-                      size="small"
-                      startIcon={<Download />}
-                      onClick={() => handleDownload(material)}
+                  <CardActions
+                    sx={{
+                      justifyContent: "space-between",
+                      backgroundColor: "lightblue",
+                      padding: "16px",
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        display: "flex",
+                        gap: 1,
+                        backgroundColor: "lightyellow",
+                        padding: "8px",
+                      }}
                     >
-                      Download
-                    </Button>
-                    <Button
-                      size="small"
-                      startIcon={<QuizIcon />}
-                      onClick={() => handleGenerateQuiz(material)}
-                      color="primary"
-                    >
-                      Generate Quiz
-                    </Button>
+                      <Button
+                        size="small"
+                        color="primary"
+                        startIcon={<Chat />}
+                        onClick={() => handleOpenChatbot(material)}
+                      >
+                        Chat
+                      </Button>
+                      <Button
+                        size="small"
+                        color="secondary"
+                        startIcon={<QuizIcon />}
+                        onClick={() => handleOpenQuizDialog(material)}
+                      >
+                        Quiz
+                      </Button>
+                      <Button
+                        size="large"
+                        color="error"
+                        variant="contained"
+                        startIcon={<Help />}
+                        onClick={() => {
+                          console.log(
+                            "Help button clicked for material:",
+                            material.originalName
+                          );
+                          handleOpenHelpModal(material);
+                        }}
+                        title="Get help resources for this material"
+                        sx={{ fontWeight: "bold", fontSize: "16px" }}
+                      >
+                        HELP TEST
+                      </Button>
+                    </Box>
                     <IconButton
                       size="small"
-                      color="error"
-                      onClick={() => handleDelete(material.id)}
+                      onClick={(event) => handleMenuOpen(event, material)}
+                      title="More options"
                     >
-                      <Delete />
+                      <MoreVert />
                     </IconButton>
                   </CardActions>
                 </Card>
@@ -426,6 +471,45 @@ const StudyFiles: React.FC = () => {
           )}
         </Box>
       )}
+
+      {/* More Options Menu */}
+      <Menu
+        anchorEl={menuAnchor}
+        open={Boolean(menuAnchor)}
+        onClose={handleMenuClose}
+        transformOrigin={{
+          vertical: "top",
+          horizontal: "right",
+        }}
+        anchorOrigin={{
+          vertical: "bottom",
+          horizontal: "right",
+        }}
+      >
+        <MenuItem
+          onClick={() => {
+            if (selectedMaterial) {
+              handleDownload(selectedMaterial);
+            }
+            handleMenuClose();
+          }}
+        >
+          <Download sx={{ mr: 1 }} />
+          Download
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            if (selectedMaterial) {
+              handleDelete(selectedMaterial.id);
+            }
+            handleMenuClose();
+          }}
+          sx={{ color: "error.main" }}
+        >
+          <Delete sx={{ mr: 1 }} />
+          Delete
+        </MenuItem>
+      </Menu>
 
       {/* Upload Dialog */}
       <Dialog
@@ -451,7 +535,12 @@ const StudyFiles: React.FC = () => {
               style={{ display: "none" }}
               id="file-upload"
               type="file"
-              onChange={handleFileSelect}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  setSelectedFile(file);
+                }
+              }}
             />
             <label htmlFor="file-upload">
               <Button
@@ -461,16 +550,9 @@ const StudyFiles: React.FC = () => {
                 fullWidth
                 sx={{ mb: 2 }}
               >
-                Choose File (PDF or PPTX)
+                {selectedFile ? selectedFile.name : "Choose File"}
               </Button>
             </label>
-
-            {selectedFile && (
-              <Alert severity="info">
-                Selected: {selectedFile.name} (
-                {formatFileSize(selectedFile.size)})
-              </Alert>
-            )}
           </Box>
 
           <TextField
@@ -509,7 +591,7 @@ const StudyFiles: React.FC = () => {
             Cancel
           </Button>
           <Button
-            onClick={handleUpload}
+            onClick={handleFileUpload}
             variant="contained"
             disabled={!selectedFile || uploading}
           >
@@ -605,7 +687,7 @@ const StudyFiles: React.FC = () => {
                 Source Material:
               </Typography>
               <Typography variant="body2">
-                {selectedMaterial.originalFilename}
+                {selectedMaterial.originalName}
               </Typography>
               {selectedMaterial.subject && (
                 <Typography variant="body2" color="text.secondary">
@@ -633,7 +715,7 @@ const StudyFiles: React.FC = () => {
             Cancel
           </Button>
           <Button
-            onClick={handleQuizGeneration}
+            onClick={handleGenerateQuiz}
             variant="contained"
             disabled={!quizTitle || !selectedMaterial || generatingQuiz}
             startIcon={
@@ -644,6 +726,42 @@ const StudyFiles: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Chatbot Drawer */}
+      {selectedMaterial && (
+        <StudyMaterialChatbot
+          open={chatbotOpen}
+          onClose={() => setChatbotOpen(false)}
+          selectedMaterial={selectedMaterial}
+          materials={materials}
+        />
+      )}
+
+      {/* Help Resources Modal */}
+      {selectedMaterial && (
+        <HelpResourcesModal
+          open={helpModalOpen}
+          onClose={() => setHelpModalOpen(false)}
+          materialId={selectedMaterial.id}
+          materialTitle={selectedMaterial.originalName}
+        />
+      )}
+
+      {/* Snackbar */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={handleSnackbarClose}
+          severity={snackbar.severity}
+          sx={{ width: "100%" }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };

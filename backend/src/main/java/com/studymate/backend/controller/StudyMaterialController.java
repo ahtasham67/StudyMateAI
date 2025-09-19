@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.studymate.backend.dto.StudyFolderDTO;
 import com.studymate.backend.dto.StudyMaterialResponse;
 import com.studymate.backend.model.StudyMaterial;
 import com.studymate.backend.model.User;
@@ -37,11 +38,12 @@ public class StudyMaterialController {
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "subject", required = false) String subject,
             @RequestParam(value = "description", required = false) String description,
+            @RequestParam(value = "folderId", required = false) Long folderId,
             @AuthenticationPrincipal User user) {
         try {
             Long userId = user.getId();
 
-            StudyMaterial savedMaterial = studyMaterialService.saveFile(file, subject, description, userId);
+            StudyMaterial savedMaterial = studyMaterialService.saveFile(file, subject, description, folderId, userId);
             StudyMaterialResponse response = convertToResponse(savedMaterial);
 
             return ResponseEntity.ok(response);
@@ -57,6 +59,40 @@ public class StudyMaterialController {
             Long userId = user.getId();
 
             List<StudyMaterial> materials = studyMaterialService.getUserMaterials(userId);
+            List<StudyMaterialResponse> responses = materials.stream()
+                    .map(this::convertToResponse)
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(responses);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+    @GetMapping("/folder/{folderId}")
+    public ResponseEntity<List<StudyMaterialResponse>> getMaterialsInFolder(
+            @PathVariable Long folderId,
+            @AuthenticationPrincipal User user) {
+        try {
+            Long userId = user.getId();
+
+            List<StudyMaterial> materials = studyMaterialService.getMaterialsInFolder(folderId, userId);
+            List<StudyMaterialResponse> responses = materials.stream()
+                    .map(this::convertToResponse)
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(responses);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+    @GetMapping("/unorganized")
+    public ResponseEntity<List<StudyMaterialResponse>> getUnorganizedMaterials(@AuthenticationPrincipal User user) {
+        try {
+            Long userId = user.getId();
+
+            List<StudyMaterial> materials = studyMaterialService.getMaterialsWithoutFolder(userId);
             List<StudyMaterialResponse> responses = materials.stream()
                     .map(this::convertToResponse)
                     .collect(Collectors.toList());
@@ -136,6 +172,16 @@ public class StudyMaterialController {
         response.setDescription(material.getDescription());
         response.setCreatedAt(material.getCreatedAt());
         response.setUpdatedAt(material.getUpdatedAt());
+
+        // Include folder information if material is in a folder
+        if (material.getFolder() != null) {
+            StudyFolderDTO folderDTO = new StudyFolderDTO();
+            folderDTO.setId(material.getFolder().getId());
+            folderDTO.setName(material.getFolder().getName());
+            folderDTO.setDescription(material.getFolder().getDescription());
+            response.setFolder(folderDTO);
+        }
+
         return response;
     }
 }

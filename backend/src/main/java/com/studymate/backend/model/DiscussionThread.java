@@ -16,6 +16,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
@@ -26,7 +27,17 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 @Entity
-@Table(name = "discussion_threads")
+@Table(name = "discussion_threads", indexes = {
+        @Index(name = "idx_course", columnList = "course"),
+        @Index(name = "idx_topic", columnList = "topic"),
+        @Index(name = "idx_course_topic", columnList = "course, topic"),
+        @Index(name = "idx_last_activity", columnList = "last_activity_at"),
+        @Index(name = "idx_created_at", columnList = "created_at"),
+        @Index(name = "idx_course_last_activity", columnList = "course, last_activity_at"),
+        @Index(name = "idx_topic_last_activity", columnList = "topic, last_activity_at"),
+        @Index(name = "idx_pinned_created", columnList = "is_pinned, created_at"),
+        @Index(name = "idx_moderated", columnList = "is_moderated")
+})
 public class DiscussionThread {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

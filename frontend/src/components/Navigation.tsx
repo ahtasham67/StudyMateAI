@@ -1,9 +1,9 @@
 import {
   AccountCircle,
+  CalendarToday,
   Dashboard,
   Edit,
   Logout,
-  Note,
   Quiz,
   School,
   UploadFile,
@@ -89,10 +89,10 @@ const Navigation: React.FC = () => {
 
           <Button
             color="inherit"
-            startIcon={<Note />}
-            onClick={() => navigate("/notes")}
+            startIcon={<CalendarToday />}
+            onClick={() => navigate("/calendar")}
           >
-            Notes
+            Calendar
           </Button>
 
           <Button
@@ -100,7 +100,7 @@ const Navigation: React.FC = () => {
             startIcon={<UploadFile />}
             onClick={() => navigate("/study-materials")}
           >
-            Study Materials
+            Learning Materials
           </Button>
 
           <Button

@@ -1,10 +1,13 @@
 package com.studymate.backend.model;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -13,6 +16,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -40,6 +44,9 @@ public class ThreadReply {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_reply_id")
     private ThreadReply parentReply;
+
+    @OneToMany(mappedBy = "reply", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private Set<ReplyKeyPhrase> keyPhrases = new HashSet<>();
 
     @Column(name = "is_moderated", nullable = false)
     private Boolean isModerated = false;
@@ -143,5 +150,23 @@ public class ThreadReply {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public Set<ReplyKeyPhrase> getKeyPhrases() {
+        return keyPhrases;
+    }
+
+    public void setKeyPhrases(Set<ReplyKeyPhrase> keyPhrases) {
+        this.keyPhrases = keyPhrases;
+    }
+
+    public void addKeyPhrase(ReplyKeyPhrase keyPhrase) {
+        keyPhrases.add(keyPhrase);
+        keyPhrase.setReply(this);
+    }
+
+    public void removeKeyPhrase(ReplyKeyPhrase keyPhrase) {
+        keyPhrases.remove(keyPhrase);
+        keyPhrase.setReply(null);
     }
 }

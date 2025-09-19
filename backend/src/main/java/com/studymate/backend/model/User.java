@@ -18,7 +18,6 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Lob;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -62,8 +61,7 @@ public class User implements UserDetails {
     @Column(name = "profile_photo_url")
     private String profilePhotoUrl;
 
-    @Lob
-    @Column(name = "profile_photo_data")
+    @Column(name = "profile_photo_data", columnDefinition = "bytea")
     private byte[] profilePhotoData;
 
     @Column(name = "profile_photo_content_type")

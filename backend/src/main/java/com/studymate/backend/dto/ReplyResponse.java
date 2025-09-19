@@ -9,6 +9,9 @@ public class ReplyResponse {
     private Long parentReplyId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private Double averageRating;
+    private Integer ratingCount;
+    private Integer userRating;
 
     // Constructors
     public ReplyResponse() {
@@ -22,6 +25,23 @@ public class ReplyResponse {
         this.parentReplyId = parentReplyId;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+        this.averageRating = 0.0;
+        this.ratingCount = 0;
+        this.userRating = null;
+    }
+
+    public ReplyResponse(Long id, String content, String authorName, Long parentReplyId,
+            LocalDateTime createdAt, LocalDateTime updatedAt,
+            Double averageRating, Integer ratingCount, Integer userRating) {
+        this.id = id;
+        this.content = content;
+        this.authorName = authorName;
+        this.parentReplyId = parentReplyId;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.averageRating = averageRating;
+        this.ratingCount = ratingCount;
+        this.userRating = userRating;
     }
 
     // Getters and Setters
@@ -71,5 +91,29 @@ public class ReplyResponse {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public Double getAverageRating() {
+        return averageRating;
+    }
+
+    public void setAverageRating(Double averageRating) {
+        this.averageRating = averageRating;
+    }
+
+    public Integer getRatingCount() {
+        return ratingCount;
+    }
+
+    public void setRatingCount(Integer ratingCount) {
+        this.ratingCount = ratingCount;
+    }
+
+    public Integer getUserRating() {
+        return userRating;
+    }
+
+    public void setUserRating(Integer userRating) {
+        this.userRating = userRating;
     }
 }

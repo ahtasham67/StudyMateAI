@@ -31,10 +31,82 @@ export interface Note {
   title: string;
   content: string;
   subject?: string;
-  tags?: string[];
+  category?: string; // Changed from tags to category to match backend
   userId: number;
   createdAt: string;
   updatedAt: string;
+  folder?: {
+    id: number;
+    name?: string; // Make name optional for API requests
+    description?: string;
+  };
+}
+
+// Study Schedule Types
+export enum SchedulePriority {
+  LOW = "LOW",
+  MEDIUM = "MEDIUM",
+  HIGH = "HIGH",
+  URGENT = "URGENT",
+}
+
+export enum ScheduleType {
+  STUDY = "STUDY",
+  EXAM = "EXAM",
+  ASSIGNMENT = "ASSIGNMENT",
+  BREAK = "BREAK",
+  MEETING = "MEETING",
+  OTHER = "OTHER",
+}
+
+export enum ScheduleStatus {
+  SCHEDULED = "SCHEDULED",
+  IN_PROGRESS = "IN_PROGRESS",
+  COMPLETED = "COMPLETED",
+  CANCELLED = "CANCELLED",
+  POSTPONED = "POSTPONED",
+}
+
+export enum RecurrenceType {
+  DAILY = "DAILY",
+  WEEKLY = "WEEKLY",
+  MONTHLY = "MONTHLY",
+}
+
+export interface StudySchedule {
+  id: number;
+  title: string;
+  description?: string;
+  startTime: string;
+  endTime: string;
+  priority: SchedulePriority;
+  type: ScheduleType;
+  status: ScheduleStatus;
+  subject?: string;
+  location?: string;
+  isRecurring: boolean;
+  recurrenceType?: RecurrenceType;
+  recurrenceInterval?: number;
+  recurrenceEndDate?: string;
+  color: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateScheduleRequest {
+  title: string;
+  description?: string;
+  startTime: string;
+  endTime: string;
+  priority?: SchedulePriority;
+  type?: ScheduleType;
+  subject?: string;
+  location?: string;
+  isRecurring?: boolean;
+  recurrenceType?: RecurrenceType;
+  recurrenceInterval?: number;
+  recurrenceEndDate?: string;
+  color?: string;
 }
 
 export interface DiscussionThread {
@@ -155,7 +227,7 @@ export interface StudyMaterial {
   id: number;
   filename: string;
   originalFilename: string;
-  fileType: "PDF" | "PPTX";
+  fileType: "PDF" | "PPTX" | "PPT";
   fileSize: number;
   uploadDate: string;
   subject?: string;
@@ -221,4 +293,40 @@ export interface ThreadsResponse extends ApiResponse {
   totalElements: number;
   totalPages: number;
   currentPage: number;
+}
+
+// Help Resources Types
+export interface VideoResource {
+  title: string;
+  description: string;
+  url: string;
+  thumbnailUrl: string;
+  channel: string;
+  duration: string;
+  publishedDate: string;
+}
+
+export interface ArticleResource {
+  title: string;
+  description: string;
+  url: string;
+  source: string;
+  author: string;
+  publishedDate: string;
+  thumbnailUrl: string;
+}
+
+export interface HelpResourcesResponse {
+  videos: VideoResource[];
+  articles: ArticleResource[];
+  blogs: ArticleResource[];
+  searchQuery: string;
+  totalResults: number;
+}
+
+export interface HelpResourcesRequest {
+  materialContent?: string;
+  materialTitle?: string;
+  searchQuery?: string;
+  maxResults?: number;
 }

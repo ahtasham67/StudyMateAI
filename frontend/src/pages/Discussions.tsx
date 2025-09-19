@@ -55,6 +55,9 @@ const Discussions: React.FC = () => {
   const [threads, setThreads] = useState<DiscussionThread[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [searchDebounceTimer, setSearchDebounceTimer] =
+    useState<NodeJS.Timeout | null>(null);
   const [selectedCourse, setSelectedCourse] = useState("");
   const [selectedTopic, setSelectedTopic] = useState("");
   const [sortBy, setSortBy] = useState("lastActivityAt");
@@ -83,8 +86,8 @@ const Discussions: React.FC = () => {
       let response;
 
       if (searchTerm) {
-        // Always use enhanced search that includes replies
-        response = await discussionAPI.searchThreadsEnhanced(
+        // Use advanced search for better relevance and comprehensive matching
+        response = await discussionAPI.searchThreadsAdvanced(
           searchTerm,
           selectedCourse || undefined,
           page,
@@ -219,6 +222,15 @@ const Discussions: React.FC = () => {
     }
   }, [selectedCourse]);
 
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (searchDebounceTimer) {
+        clearTimeout(searchDebounceTimer);
+      }
+    };
+  }, [searchDebounceTimer]);
+
   const loadCourses = async () => {
     try {
       const response = await discussionAPI.getAllCourses();
@@ -238,8 +250,21 @@ const Discussions: React.FC = () => {
   };
 
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(event.target.value);
-    setPage(0);
+    const value = event.target.value;
+    setSearchInput(value);
+
+    // Clear existing timer
+    if (searchDebounceTimer) {
+      clearTimeout(searchDebounceTimer);
+    }
+
+    // Set new timer for debounced search
+    const timer = setTimeout(() => {
+      setSearchTerm(value);
+      setPage(0);
+    }, 300); // 300ms debounce
+
+    setSearchDebounceTimer(timer);
   };
 
   const handleCourseChange = (course: string) => {
@@ -264,7 +289,14 @@ const Discussions: React.FC = () => {
     setSelectedCourse("");
     setSelectedTopic("");
     setSearchTerm("");
+    setSearchInput("");
     setPage(0);
+
+    // Clear debounce timer if active
+    if (searchDebounceTimer) {
+      clearTimeout(searchDebounceTimer);
+      setSearchDebounceTimer(null);
+    }
   };
 
   const isAuthor = (thread: DiscussionThread) => {
@@ -331,6 +363,26 @@ const Discussions: React.FC = () => {
     }
   };
 
+  // Highlight search terms in text
+  const highlightSearchTerms = (text: string, searchTerm: string) => {
+    if (!searchTerm.trim()) return text;
+
+    const terms = searchTerm.trim().toLowerCase().split(/\s+/);
+    let highlightedText = text;
+
+    terms.forEach((term) => {
+      if (term.length > 1) {
+        const regex = new RegExp(`(${term})`, "gi");
+        highlightedText = highlightedText.replace(
+          regex,
+          '<mark style="background-color: rgba(187, 134, 252, 0.3); padding: 2px 4px; border-radius: 4px;">$1</mark>'
+        );
+      }
+    });
+
+    return highlightedText;
+  };
+
   const ThreadCard: React.FC<{ thread: DiscussionThread }> = ({ thread }) => (
     <Card
       sx={{
@@ -367,9 +419,10 @@ const Discussions: React.FC = () => {
                   fontWeight: 600,
                   color: thread.isPinned ? "#bb86fc" : "text.primary",
                 }}
-              >
-                {thread.title}
-              </Typography>
+                dangerouslySetInnerHTML={{
+                  __html: highlightSearchTerms(thread.title, searchTerm),
+                }}
+              />
             </Box>
 
             <Typography
@@ -382,9 +435,10 @@ const Discussions: React.FC = () => {
                 WebkitBoxOrient: "vertical",
                 overflow: "hidden",
               }}
-            >
-              {thread.content}
-            </Typography>
+              dangerouslySetInnerHTML={{
+                __html: highlightSearchTerms(thread.content, searchTerm),
+              }}
+            />
 
             <Box sx={{ display: "flex", gap: 1, mb: 2 }}>
               <Chip
@@ -539,8 +593,8 @@ const Discussions: React.FC = () => {
                 <Box sx={{ flex: { xs: 1, md: 3 } }}>
                   <TextField
                     fullWidth
-                    placeholder="Search discussions, replies, and concepts..."
-                    value={searchTerm}
+                    placeholder="Search by keywords, titles, content, topics... (e.g., 'java programming', 'algorithm')"
+                    value={searchInput}
                     onChange={handleSearch}
                     InputProps={{
                       startAdornment: (
@@ -548,6 +602,20 @@ const Discussions: React.FC = () => {
                           <Search />
                         </InputAdornment>
                       ),
+                    }}
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        "&:hover": {
+                          "& .MuiOutlinedInput-notchedOutline": {
+                            borderColor: "rgba(187, 134, 252, 0.5)",
+                          },
+                        },
+                        "&.Mui-focused": {
+                          "& .MuiOutlinedInput-notchedOutline": {
+                            borderColor: "#bb86fc",
+                          },
+                        },
+                      },
                     }}
                   />
                 </Box>
@@ -603,6 +671,26 @@ const Discussions: React.FC = () => {
                 </Box>
               </Box>
             </Card>
+
+            {/* Search Results Status */}
+            {searchTerm && (
+              <Card
+                sx={{
+                  mb: 2,
+                  p: 2,
+                  backgroundColor: "rgba(187, 134, 252, 0.05)",
+                }}
+              >
+                <Typography variant="body2" color="text.secondary">
+                  <strong>Searching for:</strong> "{searchTerm}"
+                  {selectedCourse && ` in course "${selectedCourse}"`}
+                  {!loading &&
+                    ` • Found ${threads.length} result${
+                      threads.length !== 1 ? "s" : ""
+                    }`}
+                </Typography>
+              </Card>
+            )}
 
             {/* Threads List */}
             <Box>
