@@ -5,6 +5,8 @@ export interface User {
   firstName: string;
   lastName: string;
   profilePhotoUrl?: string;
+  profilePhotoData?: string;
+  profilePhotoContentType?: string;
   universityName?: string;
   currentTerm?: string;
   academicYear?: string;

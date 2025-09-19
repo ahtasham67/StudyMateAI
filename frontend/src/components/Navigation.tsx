@@ -48,7 +48,15 @@ const Navigation: React.FC = () => {
   };
 
   const getProfilePhotoUrl = () => {
-    if (!user?.profilePhotoUrl) return null;
+    if (!user) return null;
+    
+    // First try to use base64 data if available
+    if (user.profilePhotoData && user.profilePhotoContentType) {
+      return `data:${user.profilePhotoContentType};base64,${user.profilePhotoData}`;
+    }
+    
+    // Fallback to URL-based approach
+    if (!user.profilePhotoUrl) return null;
     
     // If it's already a full URL, return as is
     if (user.profilePhotoUrl.startsWith('http://') || user.profilePhotoUrl.startsWith('https://')) {
