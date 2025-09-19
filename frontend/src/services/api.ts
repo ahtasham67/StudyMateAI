@@ -23,6 +23,27 @@ const API_BASE_URL =
   process.env.REACT_APP_API_URL || 
   (process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:8080/api');
 
+// Helper function to get profile photo URL
+export const getProfilePhotoUrl = (profilePhotoUrl?: string) => {
+  if (!profilePhotoUrl) return null;
+  
+  // If it's already a full URL, return as is
+  if (profilePhotoUrl.startsWith('http://') || profilePhotoUrl.startsWith('https://')) {
+    return profilePhotoUrl;
+  }
+  
+  // For production, use relative URLs
+  if (process.env.NODE_ENV === 'production') {
+    return profilePhotoUrl.startsWith('/api/') ? profilePhotoUrl : `/api${profilePhotoUrl}`;
+  }
+  
+  // For development, use localhost
+  if (profilePhotoUrl.startsWith("/api/")) {
+    return `http://localhost:8080${profilePhotoUrl}`;
+  }
+  return `http://localhost:8080/api${profilePhotoUrl}`;
+};
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {

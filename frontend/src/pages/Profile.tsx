@@ -126,15 +126,23 @@ const Profile: React.FC = () => {
   };
 
   const getProfilePhotoUrl = () => {
-    if (user?.profilePhotoUrl) {
-      // If the URL already starts with /api, use it directly with localhost
-      if (user.profilePhotoUrl.startsWith("/api/")) {
-        return `http://localhost:8080${user.profilePhotoUrl}`;
-      }
-      // Otherwise, add the /api prefix
-      return `http://localhost:8080/api${user.profilePhotoUrl}`;
+    if (!user?.profilePhotoUrl) return null;
+    
+    // If it's already a full URL, return as is
+    if (user.profilePhotoUrl.startsWith('http://') || user.profilePhotoUrl.startsWith('https://')) {
+      return user.profilePhotoUrl;
     }
-    return null;
+    
+    // For production, use relative URLs
+    if (process.env.NODE_ENV === 'production') {
+      return user.profilePhotoUrl.startsWith('/api/') ? user.profilePhotoUrl : `/api${user.profilePhotoUrl}`;
+    }
+    
+    // For development, use localhost
+    if (user.profilePhotoUrl.startsWith("/api/")) {
+      return `http://localhost:8080${user.profilePhotoUrl}`;
+    }
+    return `http://localhost:8080/api${user.profilePhotoUrl}`;
   };
 
   return (
