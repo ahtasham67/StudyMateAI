@@ -51,7 +51,6 @@ services:
         value: "10MB"
       - key: MAX_REQUEST_SIZE
         value: "10MB"
-
 # FREE Tier Single URL Deployment
 # 🌐 Complete App: https://studymate-app.onrender.com
 # 📱 Frontend: https://studymate-app.onrender.com/ (React UI)
