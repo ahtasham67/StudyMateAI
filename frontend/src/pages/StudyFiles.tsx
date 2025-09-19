@@ -5,6 +5,8 @@ import {
   CloudUpload,
   Delete,
   Download,
+  Help,
+  MoreVert,
   PictureAsPdf,
   Quiz as QuizIcon,
   Search,
@@ -28,6 +30,7 @@ import {
   IconButton,
   InputLabel,
   LinearProgress,
+  Menu,
   MenuItem,
   Paper,
   Select,
@@ -36,6 +39,7 @@ import {
   Typography,
 } from "@mui/material";
 import React, { useEffect, useState } from "react";
+import HelpResourcesModal from "../components/HelpResourcesModal";
 import StudyMaterialChatbot from "../components/StudyMaterialChatbot";
 import { quizAPI, studyMaterialsAPI } from "../services/api";
 import { CreateQuizRequest } from "../types";
@@ -59,11 +63,21 @@ const StudyFiles: React.FC = () => {
   const [uploadDialog, setUploadDialog] = useState(false);
   const [quizDialog, setQuizDialog] = useState(false);
   const [chatbotOpen, setChatbotOpen] = useState(false);
+  const [helpModalOpen, setHelpModalOpen] = useState(false);
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [selectedMaterial, setSelectedMaterial] =
     useState<StudyMaterial | null>(null);
   const [generatingQuiz, setGeneratingQuiz] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Debug logging
+  console.log(
+    "StudyFiles component rendered with",
+    materials.length,
+    "materials"
+  );
+
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
     message: string;
@@ -229,6 +243,23 @@ const StudyFiles: React.FC = () => {
     setChatbotOpen(true);
   };
 
+  const handleOpenHelpModal = (material: StudyMaterial) => {
+    setSelectedMaterial(material);
+    setHelpModalOpen(true);
+  };
+
+  const handleMenuOpen = (
+    event: React.MouseEvent<HTMLElement>,
+    material: StudyMaterial
+  ) => {
+    setMenuAnchor(event.currentTarget);
+    setSelectedMaterial(material);
+  };
+
+  const handleMenuClose = () => {
+    setMenuAnchor(null);
+  };
+
   const handleSnackbarClose = () => {
     setSnackbar((prev) => ({ ...prev, open: false }));
   };
@@ -377,38 +408,61 @@ const StudyFiles: React.FC = () => {
                     </Typography>
                   </CardContent>
 
-                  <CardActions>
-                    <Button
-                      size="small"
-                      color="primary"
-                      startIcon={<Chat />}
-                      onClick={() => handleOpenChatbot(material)}
+                  <CardActions
+                    sx={{
+                      justifyContent: "space-between",
+                      backgroundColor: "lightblue",
+                      padding: "16px",
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        display: "flex",
+                        gap: 1,
+                        backgroundColor: "lightyellow",
+                        padding: "8px",
+                      }}
                     >
-                      Chat
-                    </Button>
-                    <Button
-                      size="small"
-                      color="secondary"
-                      startIcon={<QuizIcon />}
-                      onClick={() => handleOpenQuizDialog(material)}
-                    >
-                      Generate Quiz
-                    </Button>
+                      <Button
+                        size="small"
+                        color="primary"
+                        startIcon={<Chat />}
+                        onClick={() => handleOpenChatbot(material)}
+                      >
+                        Chat
+                      </Button>
+                      <Button
+                        size="small"
+                        color="secondary"
+                        startIcon={<QuizIcon />}
+                        onClick={() => handleOpenQuizDialog(material)}
+                      >
+                        Quiz
+                      </Button>
+                      <Button
+                        size="large"
+                        color="error"
+                        variant="contained"
+                        startIcon={<Help />}
+                        onClick={() => {
+                          console.log(
+                            "Help button clicked for material:",
+                            material.originalName
+                          );
+                          handleOpenHelpModal(material);
+                        }}
+                        title="Get help resources for this material"
+                        sx={{ fontWeight: "bold", fontSize: "16px" }}
+                      >
+                        HELP TEST
+                      </Button>
+                    </Box>
                     <IconButton
                       size="small"
-                      color="primary"
-                      onClick={() => handleDownload(material)}
-                      title="Download"
+                      onClick={(event) => handleMenuOpen(event, material)}
+                      title="More options"
                     >
-                      <Download />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={() => handleDelete(material.id)}
-                      title="Delete"
-                    >
-                      <Delete />
+                      <MoreVert />
                     </IconButton>
                   </CardActions>
                 </Card>
@@ -417,6 +471,45 @@ const StudyFiles: React.FC = () => {
           )}
         </Box>
       )}
+
+      {/* More Options Menu */}
+      <Menu
+        anchorEl={menuAnchor}
+        open={Boolean(menuAnchor)}
+        onClose={handleMenuClose}
+        transformOrigin={{
+          vertical: "top",
+          horizontal: "right",
+        }}
+        anchorOrigin={{
+          vertical: "bottom",
+          horizontal: "right",
+        }}
+      >
+        <MenuItem
+          onClick={() => {
+            if (selectedMaterial) {
+              handleDownload(selectedMaterial);
+            }
+            handleMenuClose();
+          }}
+        >
+          <Download sx={{ mr: 1 }} />
+          Download
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            if (selectedMaterial) {
+              handleDelete(selectedMaterial.id);
+            }
+            handleMenuClose();
+          }}
+          sx={{ color: "error.main" }}
+        >
+          <Delete sx={{ mr: 1 }} />
+          Delete
+        </MenuItem>
+      </Menu>
 
       {/* Upload Dialog */}
       <Dialog
@@ -641,6 +734,16 @@ const StudyFiles: React.FC = () => {
           onClose={() => setChatbotOpen(false)}
           selectedMaterial={selectedMaterial}
           materials={materials}
+        />
+      )}
+
+      {/* Help Resources Modal */}
+      {selectedMaterial && (
+        <HelpResourcesModal
+          open={helpModalOpen}
+          onClose={() => setHelpModalOpen(false)}
+          materialId={selectedMaterial.id}
+          materialTitle={selectedMaterial.originalName}
         />
       )}
 

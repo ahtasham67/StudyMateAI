@@ -5,6 +5,7 @@ import {
   Edit,
   Folder as FolderIcon,
   GridView,
+  Help,
   InsertDriveFile,
   MoreVert,
   Note as NoteIcon,
@@ -44,6 +45,7 @@ import {
 import { format } from "date-fns";
 import React, { useEffect, useState } from "react";
 import FolderTree from "../components/FolderTree";
+import HelpResourcesModal from "../components/HelpResourcesModal";
 import StudyMaterialChatbot from "../components/StudyMaterialChatbot";
 import {
   folderAPI,
@@ -96,6 +98,7 @@ const StudyMaterialsWithFolders: React.FC = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [quizDialogOpen, setQuizDialogOpen] = useState(false);
   const [chatbotOpen, setChatbotOpen] = useState(false);
+  const [helpModalOpen, setHelpModalOpen] = useState(false);
   const [selectedMaterial, setSelectedMaterial] =
     useState<StudyMaterial | null>(null);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
@@ -479,6 +482,11 @@ const StudyMaterialsWithFolders: React.FC = () => {
     setQuizDialogOpen(true);
   };
 
+  const handleOpenHelpModal = (material: StudyMaterial) => {
+    setSelectedMaterial(material);
+    setHelpModalOpen(true);
+  };
+
   const handleGenerateQuiz = async () => {
     if (!selectedMaterial) return;
 
@@ -611,9 +619,13 @@ const StudyMaterialsWithFolders: React.FC = () => {
           <QuizIcon sx={{ mr: 0.5 }} />
           Quiz
         </Button>
-        <Button size="small" onClick={() => handleDownload(material)}>
-          <Download sx={{ mr: 0.5 }} />
-          Download
+        <Button
+          size="small"
+          onClick={() => handleOpenHelpModal(material)}
+          color="info"
+        >
+          <Help sx={{ mr: 0.5 }} />
+          Help
         </Button>
         <IconButton size="small" onClick={(e) => handleMenuOpen(e, material)}>
           <MoreVert />
@@ -730,15 +742,16 @@ const StudyMaterialsWithFolders: React.FC = () => {
             <Button
               size="small"
               variant="outlined"
-              onClick={() => handleDownload(material)}
-              sx={{ minWidth: { xs: "auto", sm: "80px" } }}
+              color="info"
+              onClick={() => handleOpenHelpModal(material)}
+              sx={{ minWidth: { xs: "auto", sm: "64px" } }}
             >
-              <Download fontSize="small" />
+              <Help fontSize="small" />
               <Typography
                 variant="caption"
                 sx={{ ml: 0.5, display: { xs: "none", sm: "inline" } }}
               >
-                Download
+                Help
               </Typography>
             </Button>
             <IconButton
@@ -1278,6 +1291,16 @@ const StudyMaterialsWithFolders: React.FC = () => {
           onClose={() => setChatbotOpen(false)}
           selectedMaterial={selectedMaterial}
           materials={materials}
+        />
+      )}
+
+      {/* Help Resources Modal */}
+      {selectedMaterial && (
+        <HelpResourcesModal
+          open={helpModalOpen}
+          onClose={() => setHelpModalOpen(false)}
+          materialId={selectedMaterial.id}
+          materialTitle={selectedMaterial.originalName}
         />
       )}
 

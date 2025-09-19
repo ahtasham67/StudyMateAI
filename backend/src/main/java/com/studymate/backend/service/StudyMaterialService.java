@@ -111,7 +111,7 @@ public class StudyMaterialService {
 
     @Transactional(readOnly = true)
     public List<StudyMaterial> getMaterialsWithoutFolder(Long userId) {
-        return studyMaterialRepository.findByUserIdAndFolderIsNullOrderByCreatedAtDesc(userId);
+        return studyMaterialRepository.findUnorganizedMaterialsWithFolder(userId);
     }
 
     private void validateFile(MultipartFile file) {

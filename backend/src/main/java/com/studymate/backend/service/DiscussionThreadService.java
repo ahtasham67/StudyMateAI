@@ -61,9 +61,8 @@ public class DiscussionThreadService {
 
         DiscussionThread savedThread = threadRepository.save(thread);
 
-        // Process thread for knowledge graph
-        knowledgeGraphService.processThreadForKnowledgeGraph(savedThread);
-        savedThread = threadRepository.save(savedThread);
+        // Process thread for knowledge graph asynchronously to improve performance
+        processKnowledgeGraphAsync(savedThread);
 
         ThreadResponse threadResponse = convertToThreadResponse(savedThread);
 
@@ -71,6 +70,17 @@ public class DiscussionThreadService {
         webSocketService.broadcastThreadCreated(threadResponse);
 
         return threadResponse;
+    }
+
+    @Async("knowledgeGraphExecutor")
+    public void processKnowledgeGraphAsync(DiscussionThread thread) {
+        try {
+            knowledgeGraphService.processThreadForKnowledgeGraph(thread);
+            threadRepository.save(thread);
+        } catch (Exception e) {
+            System.err.println(
+                    "Async knowledge graph processing failed for thread " + thread.getId() + ": " + e.getMessage());
+        }
     }
 
     @Transactional(readOnly = true)
@@ -103,30 +113,49 @@ public class DiscussionThreadService {
                 .map(this::convertToThreadResponse);
     }
 
+    @Transactional(readOnly = true)
     public Page<ThreadResponse> searchThreads(String searchTerm, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         return threadRepository.searchThreads(searchTerm, pageable)
                 .map(this::convertToThreadResponse);
     }
 
+    @Transactional(readOnly = true)
     public Page<ThreadResponse> searchThreadsWithReplies(String searchTerm, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         return threadRepository.searchThreadsWithReplies(searchTerm, pageable)
                 .map(this::convertToThreadResponse);
     }
 
+    @Transactional(readOnly = true)
     public Page<ThreadResponse> searchThreadsWithKnowledge(String searchTerm, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        return threadRepository.searchThreadsWithKnowledge(searchTerm, pageable)
-                .map(this::convertToThreadResponse);
+
+        // Clean and prepare search term for better matching
+        String cleanedSearchTerm = searchTerm.trim();
+
+        // For comprehensive search, try multiple variations of the search term
+        Page<DiscussionThread> threads;
+
+        if (cleanedSearchTerm.length() <= 2) {
+            // For very short terms, use exact matching to avoid too many results
+            threads = threadRepository.searchThreadsWithKnowledge(cleanedSearchTerm, pageable);
+        } else {
+            // For longer terms, use the enhanced search
+            threads = threadRepository.searchThreadsWithKnowledge(cleanedSearchTerm, pageable);
+        }
+
+        return threads.map(thread -> convertToThreadResponse(thread));
     }
 
+    @Transactional(readOnly = true)
     public Page<ThreadResponse> searchThreadsByCourse(String course, String searchTerm, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         return threadRepository.searchThreadsByCourse(course, searchTerm, pageable)
                 .map(this::convertToThreadResponse);
     }
 
+    @Transactional(readOnly = true)
     public Page<ThreadResponse> searchThreadsByCourseWithKnowledge(String course, String searchTerm, int page,
             int size) {
         Pageable pageable = PageRequest.of(page, size);
@@ -134,6 +163,7 @@ public class DiscussionThreadService {
                 .map(this::convertToThreadResponse);
     }
 
+    @Transactional
     public Optional<ThreadResponse> getThreadById(Long threadId) {
         Optional<DiscussionThread> thread = threadRepository.findById(threadId);
         if (thread.isPresent()) {
@@ -141,7 +171,8 @@ public class DiscussionThreadService {
             DiscussionThread foundThread = thread.get();
             foundThread.incrementViewCount();
             threadRepository.save(foundThread);
-            return Optional.of(convertToThreadResponse(foundThread));
+            // Include full knowledge data for detail views
+            return Optional.of(convertToThreadResponse(foundThread, true));
         }
         return Optional.empty();
     }
@@ -259,7 +290,7 @@ public class DiscussionThreadService {
             // Limit content length to avoid excessive processing time
             String processableContent = content.length() > 2000 ? content.substring(0, 2000) + "..." : content;
 
-            // Use Stanford NLP for key phrase extraction
+            // Use NLP for key phrase extraction
             List<String> keyPhrases = nlpKeyPhraseService.extractKeyPhrases(processableContent);
 
             // Limit the number of key phrases to save
@@ -297,6 +328,10 @@ public class DiscussionThreadService {
     }
 
     public Page<ReplyResponse> getRepliesByThread(Long threadId, int page, int size) {
+        return getRepliesByThread(threadId, page, size, null);
+    }
+
+    public Page<ReplyResponse> getRepliesByThread(Long threadId, int page, int size, User currentUser) {
         Optional<DiscussionThread> threadOpt = threadRepository.findById(threadId);
         if (threadOpt.isEmpty()) {
             throw new RuntimeException("Thread not found");
@@ -304,7 +339,7 @@ public class DiscussionThreadService {
 
         Pageable pageable = PageRequest.of(page, size);
         return replyRepository.findByThreadAndIsDeletedFalseOrderByCreatedAtAsc(threadOpt.get(), pageable)
-                .map(this::convertToReplyResponse);
+                .map(reply -> convertToReplyResponse(reply, currentUser));
     }
 
     public boolean deleteThread(Long threadId, User user) {
@@ -325,8 +360,26 @@ public class DiscussionThreadService {
         System.out.println(
                 "Deleting thread " + threadId + " with " + replyCount + " replies by user " + user.getUsername());
 
-        // The cascade delete will automatically handle all replies
-        // when we delete the thread due to CascadeType.ALL configuration
+        // Get all replies for this thread
+        List<ThreadReply> replies = replyRepository.findByThread(thread);
+
+        // Delete all reply key phrases first to avoid foreign key constraint violations
+        for (ThreadReply reply : replies) {
+            List<ReplyKeyPhrase> keyPhrases = replyKeyPhraseRepository.findByReply(reply);
+            if (!keyPhrases.isEmpty()) {
+                replyKeyPhraseRepository.deleteAll(keyPhrases);
+                System.out.println("Deleted " + keyPhrases.size() + " key phrases for reply " + reply.getId());
+            }
+        }
+
+        // Delete all thread key phrases if any exist
+        List<ReplyKeyPhrase> threadKeyPhrases = replyKeyPhraseRepository.findByThreadId(threadId);
+        if (!threadKeyPhrases.isEmpty()) {
+            replyKeyPhraseRepository.deleteAll(threadKeyPhrases);
+            System.out.println("Deleted " + threadKeyPhrases.size() + " thread-level key phrases");
+        }
+
+        // Now delete the thread (this will cascade delete the replies)
         threadRepository.delete(thread);
 
         System.out.println("Thread " + threadId + " and all its " + replyCount + " replies have been deleted");
@@ -350,15 +403,24 @@ public class DiscussionThreadService {
             throw new RuntimeException("Not authorized to delete this reply");
         }
 
-        reply.setIsDeleted(true);
-        replyRepository.save(reply);
+        // Get the thread before deletion for broadcasting
+        DiscussionThread thread = reply.getThread();
+
+        // Delete associated key phrases first to avoid foreign key constraint violation
+        List<ReplyKeyPhrase> keyPhrases = replyKeyPhraseRepository.findByReply(reply);
+        if (!keyPhrases.isEmpty()) {
+            replyKeyPhraseRepository.deleteAll(keyPhrases);
+            System.out.println("Deleted " + keyPhrases.size() + " key phrases for reply " + replyId);
+        }
+
+        // Now delete the reply
+        replyRepository.delete(reply);
 
         // Update thread reply count
-        DiscussionThread thread = reply.getThread();
         thread.decrementReplyCount();
         threadRepository.save(thread);
 
-        System.out.println("Reply " + replyId + " marked as deleted by user " + user.getUsername());
+        System.out.println("Reply " + replyId + " deleted by user " + user.getUsername());
 
         // Broadcast reply deletion to thread followers
         webSocketService.broadcastReplyDeleted(thread.getId(), replyId);
@@ -409,6 +471,10 @@ public class DiscussionThreadService {
 
     // Helper methods
     private ThreadResponse convertToThreadResponse(DiscussionThread thread) {
+        return convertToThreadResponse(thread, false); // Default to lightweight conversion
+    }
+
+    private ThreadResponse convertToThreadResponse(DiscussionThread thread, boolean includeFullKnowledgeData) {
         String authorName = thread.getAuthor() != null ? thread.getAuthor().getUsername() : "Unknown";
 
         ThreadResponse response = new ThreadResponse(
@@ -429,10 +495,11 @@ public class DiscussionThreadService {
         response.setAiGeneratedSummary(thread.getAiGeneratedSummary());
         response.setKnowledgeScore(thread.getKnowledgeScore());
 
-        // Convert knowledge entities to DTOs
-        if (thread.getKnowledgeEntities() != null) {
+        // Convert knowledge entities to DTOs with performance optimization
+        if (thread.getKnowledgeEntities() != null && !thread.getKnowledgeEntities().isEmpty()) {
             List<KnowledgeEntityResponse> entityResponses = thread.getKnowledgeEntities().stream()
-                    .map(this::convertToKnowledgeEntityResponse)
+                    .limit(5) // Limit to top 5 entities for list views
+                    .map(entity -> convertToKnowledgeEntityResponse(entity, includeFullKnowledgeData))
                     .collect(Collectors.toList());
             response.setKnowledgeEntities(entityResponses);
         }
@@ -440,7 +507,8 @@ public class DiscussionThreadService {
         return response;
     }
 
-    private KnowledgeEntityResponse convertToKnowledgeEntityResponse(KnowledgeEntity entity) {
+    private KnowledgeEntityResponse convertToKnowledgeEntityResponse(KnowledgeEntity entity,
+            boolean includeRelatedData) {
         KnowledgeEntityResponse response = new KnowledgeEntityResponse(
                 entity.getId(),
                 entity.getName(),
@@ -450,14 +518,22 @@ public class DiscussionThreadService {
                 entity.getFrequencyCount(),
                 entity.getCreatedAt());
 
-        // Add related entity names
-        List<String> relatedNames = entity.getRelatedEntities().stream()
-                .limit(5)
-                .map(KnowledgeEntity::getName)
-                .collect(Collectors.toList());
-        response.setRelatedEntityNames(relatedNames);
+        // Only include expensive related data when specifically requested (e.g., detail
+        // views)
+        if (includeRelatedData) {
+            // Add related entity names
+            List<String> relatedNames = entity.getRelatedEntities().stream()
+                    .limit(5)
+                    .map(KnowledgeEntity::getName)
+                    .collect(Collectors.toList());
+            response.setRelatedEntityNames(relatedNames);
 
-        response.setRelatedThreadCount((long) entity.getRelatedThreads().size());
+            response.setRelatedThreadCount((long) entity.getRelatedThreads().size());
+        } else {
+            // For list views, use empty lists to avoid N+1 queries
+            response.setRelatedEntityNames(List.of());
+            response.setRelatedThreadCount(0L);
+        }
 
         return response;
     }
@@ -469,6 +545,22 @@ public class DiscussionThreadService {
                 reply.getAuthor().getUsername(),
                 reply.getParentReply() != null ? reply.getParentReply().getId() : null,
                 reply.getCreatedAt(),
-                reply.getUpdatedAt());
+                reply.getUpdatedAt(),
+                0.0, // averageRating placeholder
+                0, // ratingCount placeholder
+                null); // userRating placeholder
+    }
+
+    private ReplyResponse convertToReplyResponse(ThreadReply reply, User currentUser) {
+        return new ReplyResponse(
+                reply.getId(),
+                reply.getContent(),
+                reply.getAuthor().getUsername(),
+                reply.getParentReply() != null ? reply.getParentReply().getId() : null,
+                reply.getCreatedAt(),
+                reply.getUpdatedAt(),
+                0.0, // averageRating placeholder
+                0, // ratingCount placeholder
+                null); // userRating placeholder
     }
 }

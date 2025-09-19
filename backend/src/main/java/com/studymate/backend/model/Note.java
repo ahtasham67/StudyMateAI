@@ -51,6 +51,7 @@ public class Note {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "folder_id")
+    @JsonIgnore
     private StudyFolder folder;
 
     // Constructors

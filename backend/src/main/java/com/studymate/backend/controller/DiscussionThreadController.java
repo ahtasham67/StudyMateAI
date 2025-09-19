@@ -279,9 +279,10 @@ public class DiscussionThreadController {
     public ResponseEntity<Map<String, Object>> getRepliesByThread(
             @PathVariable Long threadId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "20") int size,
+            @AuthenticationPrincipal User currentUser) {
         try {
-            var result = discussionThreadService.getRepliesByThread(threadId, page, size);
+            var result = discussionThreadService.getRepliesByThread(threadId, page, size, currentUser);
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "content", result.getContent(),

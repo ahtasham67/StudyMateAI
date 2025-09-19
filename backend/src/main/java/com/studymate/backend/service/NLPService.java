@@ -1,55 +1,39 @@
 package com.studymate.backend.service;
 
 import java.util.HashSet;
-import java.util.List;
-import java.util.Properties;
 import java.util.Set;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.studymate.backend.model.KnowledgeEntity;
 
-import edu.stanford.nlp.ling.CoreAnnotations;
-import edu.stanford.nlp.ling.CoreLabel;
-import edu.stanford.nlp.pipeline.Annotation;
-import edu.stanford.nlp.pipeline.StanfordCoreNLP;
-import edu.stanford.nlp.util.CoreMap;
 import jakarta.annotation.PostConstruct;
 
 @Service
 public class NLPService {
 
-    private StanfordCoreNLP pipeline;
-    private boolean nlpAvailable = false;
+    @Autowired
+    private OpenNLPService openNLPService;
 
     @PostConstruct
     public void init() {
-        try {
-            // Initialize Stanford CoreNLP with basic annotators (excluding problematic
-            // ones)
-            Properties props = new Properties();
-            props.setProperty("annotators", "tokenize,pos,lemma,ner");
-            props.setProperty("timeout", "30000");
-            props.setProperty("ner.useSUTime", "false"); // Disable SUTime to avoid initialization issues
-
-            this.pipeline = new StanfordCoreNLP(props);
-            nlpAvailable = true;
-            System.out.println("Stanford CoreNLP pipeline initialized successfully!");
-        } catch (Exception e) {
-            System.err.println("Stanford CoreNLP not available, using fallback methods: " + e.getMessage());
-            nlpAvailable = false;
-        }
+        System.out.println("NLPService initialized using OpenNLP for fast processing!");
     }
 
     /**
-     * Extract named entities using Stanford CoreNLP or fallback methods
+     * Extract named entities using OpenNLP (fast and efficient)
      */
     public Set<KnowledgeEntity> extractNamedEntities(String text, String course) {
-        if (nlpAvailable && pipeline != null) {
+        if (openNLPService.isNlpAvailable()) {
             try {
-                return extractEntitiesWithCoreNLP(text, course);
+                long startTime = System.currentTimeMillis();
+                Set<KnowledgeEntity> entities = openNLPService.extractNamedEntities(text, course);
+                long endTime = System.currentTimeMillis();
+                System.out.println("OpenNLP extraction completed in " + (endTime - startTime) + "ms");
+                return entities;
             } catch (Exception e) {
-                System.err.println("CoreNLP extraction failed, using fallback: " + e.getMessage());
+                System.err.println("OpenNLP extraction failed: " + e.getMessage());
             }
         }
 
@@ -57,70 +41,30 @@ public class NLPService {
         return extractEntitiesSimple(text, course);
     }
 
-    private Set<KnowledgeEntity> extractEntitiesWithCoreNLP(String text, String course) {
-        Set<KnowledgeEntity> entities = new HashSet<>();
-
-        // Create an annotation object with the text
-        Annotation document = new Annotation(text);
-
-        // Run all annotators on this text
-        pipeline.annotate(document);
-
-        // Get sentences
-        List<CoreMap> sentences = document.get(CoreAnnotations.SentencesAnnotation.class);
-
-        for (CoreMap sentence : sentences) {
-            // Get tokens for each sentence
-            List<CoreLabel> tokens = sentence.get(CoreAnnotations.TokensAnnotation.class);
-
-            for (CoreLabel token : tokens) {
-                String word = token.get(CoreAnnotations.TextAnnotation.class);
-                String nerTag = token.get(CoreAnnotations.NamedEntityTagAnnotation.class);
-                String pos = token.get(CoreAnnotations.PartOfSpeechAnnotation.class);
-                String lemma = token.get(CoreAnnotations.LemmaAnnotation.class);
-
-                // Process named entities
-                if (nerTag != null && !nerTag.equals("O") && word.length() > 2) {
-                    double confidence = calculateEntityConfidence(nerTag, pos, word);
-                    String entityType = mapNERTagToEntityType(nerTag);
-                    String description = generateEntityDescription(nerTag, course);
-
-                    entities.add(new KnowledgeEntity(word, entityType, description, confidence));
-                }
-
-                // Extract important nouns and technical terms
-                if (isImportantTerm(pos, lemma, word)) {
-                    entities.add(new KnowledgeEntity(lemma, "TERM",
-                            "Important term from " + course, 0.7));
-                }
-            }
-        }
-
-        return entities;
+    /**
+     * Extract key phrases using simple pattern matching
+     */
+    public Set<String> extractKeyPhrases(String text) {
+        return extractKeyPhrasesSimple(text);
     }
 
     /**
-     * Fallback entity extraction when CoreNLP is not available
+     * Simple fallback entity extraction
      */
     private Set<KnowledgeEntity> extractEntitiesSimple(String text, String course) {
         Set<KnowledgeEntity> entities = new HashSet<>();
 
-        // Simple regex-based extraction
+        if (text == null || text.trim().isEmpty()) {
+            return entities;
+        }
+
+        // Simple regex-based extraction for fallback
         String[] words = text.split("\\s+");
-
         for (String word : words) {
-            // Look for capitalized words that might be entities
-            if (word.matches("[A-Z][a-z]+") && word.length() > 3 && !isCommonWord(word)) {
+            word = word.replaceAll("[^a-zA-Z0-9]", "");
+            if (word.length() > 4 && Character.isUpperCase(word.charAt(0)) && !isCommonWord(word)) {
                 entities.add(new KnowledgeEntity(word, "TERM",
-                        "Potential entity from " + course, 0.6));
-            }
-
-            // Look for technical terms (words with mixed case or containing numbers)
-            if (word.matches(".*[A-Z].*[a-z].*") || word.matches(".*\\d.*")) {
-                if (word.length() > 3 && !isCommonWord(word)) {
-                    entities.add(new KnowledgeEntity(word, "TECHNICAL_TERM",
-                            "Technical term from " + course, 0.7));
-                }
+                        "Term from " + course, 0.5));
             }
         }
 
@@ -128,94 +72,41 @@ public class NLPService {
     }
 
     /**
-     * Extract key phrases using Stanford CoreNLP
+     * Simple key phrase extraction fallback
      */
-    public Set<String> extractKeyPhrases(String text) {
-        if (nlpAvailable && pipeline != null) {
-            try {
-                return extractKeyPhrasesWithCoreNLP(text);
-            } catch (Exception e) {
-                System.err.println("CoreNLP key phrase extraction failed, using simple method: " + e.getMessage());
-            }
-        }
-
-        // Simple key phrase extraction
-        return extractKeyPhrasesSimple(text);
-    }
-
-    private Set<String> extractKeyPhrasesWithCoreNLP(String text) {
-        Set<String> keyPhrases = new HashSet<>();
-
-        Annotation document = new Annotation(text);
-        pipeline.annotate(document);
-
-        List<CoreMap> sentences = document.get(CoreAnnotations.SentencesAnnotation.class);
-
-        for (CoreMap sentence : sentences) {
-            List<CoreLabel> tokens = sentence.get(CoreAnnotations.TokensAnnotation.class);
-
-            // Extract noun phrases
-            StringBuilder currentPhrase = new StringBuilder();
-            boolean inNounPhrase = false;
-
-            for (CoreLabel token : tokens) {
-                String pos = token.get(CoreAnnotations.PartOfSpeechAnnotation.class);
-                String word = token.get(CoreAnnotations.TextAnnotation.class);
-
-                if (pos.startsWith("NN") || pos.startsWith("JJ")) {
-                    if (!inNounPhrase) {
-                        currentPhrase = new StringBuilder();
-                        inNounPhrase = true;
-                    }
-                    currentPhrase.append(word).append(" ");
-                } else {
-                    if (inNounPhrase && currentPhrase.length() > 0) {
-                        String phrase = currentPhrase.toString().trim();
-                        if (phrase.length() > 3 && phrase.split(" ").length <= 4) {
-                            keyPhrases.add(phrase);
-                        }
-                    }
-                    inNounPhrase = false;
-                }
-            }
-
-            // Don't forget the last phrase
-            if (inNounPhrase && currentPhrase.length() > 0) {
-                String phrase = currentPhrase.toString().trim();
-                if (phrase.length() > 3) {
-                    keyPhrases.add(phrase);
-                }
-            }
-        }
-
-        return keyPhrases;
-    }
-
     private Set<String> extractKeyPhrasesSimple(String text) {
         Set<String> keyPhrases = new HashSet<>();
 
-        // Extract noun phrases using simple patterns
-        String[] sentences = text.split("\\. ");
+        if (text == null || text.trim().isEmpty()) {
+            return keyPhrases;
+        }
 
+        // Extract potential key phrases using simple patterns
+        String[] sentences = text.split("[.!?]+");
         for (String sentence : sentences) {
-            String[] words = sentence.split("\\s+");
+            String[] words = sentence.trim().split("\\s+");
 
+            // Look for noun phrases (2-4 consecutive capitalized or longer words)
             for (int i = 0; i < words.length - 1; i++) {
-                // Look for adjective + noun combinations
-                if (words[i].matches("[A-Z][a-z]+") && words[i + 1].matches("[a-z]+")) {
-                    String phrase = words[i] + " " + words[i + 1];
-                    if (phrase.length() > 5 && !containsCommonWord(phrase)) {
-                        keyPhrases.add(phrase);
+                StringBuilder phrase = new StringBuilder();
+                int wordCount = 0;
+
+                for (int j = i; j < Math.min(i + 4, words.length); j++) {
+                    String cleanWord = words[j].replaceAll("[^a-zA-Z0-9]", "");
+
+                    if (cleanWord.length() > 3 &&
+                            (Character.isUpperCase(cleanWord.charAt(0)) || cleanWord.length() > 6)) {
+                        if (phrase.length() > 0)
+                            phrase.append(" ");
+                        phrase.append(cleanWord);
+                        wordCount++;
+                    } else {
+                        break;
                     }
                 }
 
-                // Look for noun + noun combinations
-                if (words[i].matches("[a-z]+") && words[i + 1].matches("[a-z]+") &&
-                        words[i].length() > 3 && words[i + 1].length() > 3) {
-                    String phrase = words[i] + " " + words[i + 1];
-                    if (!containsCommonWord(phrase)) {
-                        keyPhrases.add(phrase);
-                    }
+                if (wordCount >= 2 && phrase.length() > 6) {
+                    keyPhrases.add(phrase.toString());
                 }
             }
         }
@@ -224,155 +115,61 @@ public class NLPService {
     }
 
     /**
-     * Analyze sentiment using simple heuristics
+     * Analyze sentiment of text using simple pattern matching
      */
     public String analyzeSentiment(String text) {
+        if (text == null || text.trim().isEmpty()) {
+            return "NEUTRAL";
+        }
+
         String lowerText = text.toLowerCase();
 
-        // Simple sentiment analysis based on keywords
-        int positiveCount = 0;
-        int negativeCount = 0;
+        // Simple sentiment analysis using keyword matching
+        int positiveScore = 0;
+        int negativeScore = 0;
 
-        String[] positiveWords = { "good", "great", "excellent", "amazing", "wonderful", "helpful", "useful", "clear" };
-        String[] negativeWords = { "bad", "terrible", "awful", "confusing", "difficult", "hard", "problem", "issue" };
+        // Positive words
+        String[] positiveWords = { "good", "great", "excellent", "amazing", "awesome", "helpful",
+                "useful", "clear", "easy", "understand", "love", "like", "best",
+                "perfect", "wonderful", "fantastic", "brilliant" };
+
+        // Negative words
+        String[] negativeWords = { "bad", "terrible", "awful", "hate", "difficult", "hard",
+                "confusing", "unclear", "wrong", "problem", "issue", "error",
+                "fail", "worst", "horrible", "poor" };
 
         for (String word : positiveWords) {
-            if (lowerText.contains(word))
-                positiveCount++;
+            if (lowerText.contains(word)) {
+                positiveScore++;
+            }
         }
 
         for (String word : negativeWords) {
-            if (lowerText.contains(word))
-                negativeCount++;
+            if (lowerText.contains(word)) {
+                negativeScore++;
+            }
         }
 
-        if (positiveCount > negativeCount)
-            return "Positive";
-        if (negativeCount > positiveCount)
-            return "Negative";
-        return "Neutral";
-    }
-
-    // Helper methods
-    private double calculateEntityConfidence(String nerTag, String pos, String word) {
-        double confidence = 0.5;
-
-        switch (nerTag) {
-            case "PERSON":
-                confidence = 0.9;
-                break;
-            case "ORGANIZATION":
-                confidence = 0.85;
-                break;
-            case "LOCATION":
-                confidence = 0.8;
-                break;
-            case "MISC":
-                confidence = 0.6;
-                break;
-            case "MONEY":
-                confidence = 0.75;
-                break;
-            case "NUMBER":
-                confidence = 0.7;
-                break;
-            case "ORDINAL":
-                confidence = 0.65;
-                break;
-            case "PERCENT":
-                confidence = 0.7;
-                break;
-            case "DATE":
-                confidence = 0.8;
-                break;
-            case "TIME":
-                confidence = 0.75;
-                break;
-        }
-
-        if (pos != null && pos.startsWith("NNP"))
-            confidence += 0.1;
-        if (word.length() > 6)
-            confidence += 0.05;
-
-        return Math.min(1.0, confidence);
-    }
-
-    private String mapNERTagToEntityType(String nerTag) {
-        switch (nerTag) {
-            case "PERSON":
-                return "PERSON";
-            case "ORGANIZATION":
-                return "ORGANIZATION";
-            case "LOCATION":
-                return "LOCATION";
-            case "MISC":
-                return "CONCEPT";
-            case "MONEY":
-                return "MONETARY";
-            case "NUMBER":
-                return "NUMERIC";
-            case "ORDINAL":
-                return "NUMERIC";
-            case "PERCENT":
-                return "NUMERIC";
-            case "DATE":
-                return "TEMPORAL";
-            case "TIME":
-                return "TEMPORAL";
-            default:
-                return "TERM";
+        if (positiveScore > negativeScore) {
+            return "POSITIVE";
+        } else if (negativeScore > positiveScore) {
+            return "NEGATIVE";
+        } else {
+            return "NEUTRAL";
         }
     }
 
-    private String generateEntityDescription(String nerTag, String course) {
-        switch (nerTag) {
-            case "PERSON":
-                return "Person mentioned in " + course + " discussion";
-            case "ORGANIZATION":
-                return "Organization relevant to " + course;
-            case "LOCATION":
-                return "Location mentioned in " + course + " context";
-            case "MONEY":
-                return "Monetary value from " + course;
-            case "DATE":
-            case "TIME":
-                return "Date/time reference in " + course;
-            case "NUMBER":
-            case "ORDINAL":
-            case "PERCENT":
-                return "Numerical data from " + course;
-            default:
-                return "Entity identified in " + course + " discussion";
-        }
-    }
-
-    private boolean isImportantTerm(String pos, String lemma, String word) {
-        if (pos == null || lemma == null || word == null) {
-            return false;
-        }
-
-        return (pos.startsWith("NN") && word.length() > 4 &&
-                !isCommonWord(word) &&
-                (word.matches(".*[A-Z].*") || // Contains uppercase (might be technical)
-                        word.matches(".*\\d.*") || // Contains numbers (might be version/model)
-                        lemma.length() > 5)); // Long lemma (likely specific term)
-    }
-
+    /**
+     * Check if word is a common word that should be ignored
+     */
     private boolean isCommonWord(String word) {
+        String lower = word.toLowerCase();
         Set<String> commonWords = Set.of(
-                "The", "This", "That", "With", "From", "When", "Where", "What", "How", "Why",
-                "And", "But", "For", "Not", "You", "All", "Can", "Had", "Her", "Was", "One",
-                "Will", "Would", "Could", "Should", "May", "Might", "Must", "Shall");
-        return commonWords.contains(word);
-    }
-
-    private boolean containsCommonWord(String phrase) {
-        String[] words = phrase.split("\\s+");
-        for (String word : words) {
-            if (isCommonWord(word))
-                return true;
-        }
-        return false;
+                "the", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by",
+                "is", "are", "was", "were", "be", "been", "have", "has", "had", "do", "does",
+                "did", "will", "would", "could", "should", "may", "might", "can", "this",
+                "that", "these", "those", "all", "any", "some", "many", "much", "more", "most",
+                "other", "another", "such", "what", "which", "who", "when", "where", "why", "how");
+        return commonWords.contains(lower);
     }
 }

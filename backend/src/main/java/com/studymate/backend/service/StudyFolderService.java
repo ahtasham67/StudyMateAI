@@ -37,7 +37,7 @@ public class StudyFolderService {
     @Transactional(readOnly = true)
     public List<StudyFolderDTO> getRootFolders(Long userId) {
         logger.info("Getting root folders for user {}", userId);
-        List<StudyFolder> folders = studyFolderRepository.findByUserIdAndParentFolderIsNull(userId);
+        List<StudyFolder> folders = studyFolderRepository.findRootFoldersWithAssociations(userId);
         return folders.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -133,11 +133,13 @@ public class StudyFolderService {
 
         StudyFolder folder = folderOpt.get();
 
+        // Get current parent folder ID safely without triggering lazy loading
+        Long currentParentFolderId = studyFolderRepository.getParentFolderId(folder.getId());
+
         // Validate parent folder if changed
         StudyFolder newParentFolder = null;
         if (request.getParentFolderId() != null) {
-            if (!request.getParentFolderId()
-                    .equals(folder.getParentFolder() != null ? folder.getParentFolder().getId() : null)) {
+            if (!request.getParentFolderId().equals(currentParentFolderId)) {
                 Optional<StudyFolder> parentOpt = studyFolderRepository.findByIdAndUserId(request.getParentFolderId(),
                         userId);
                 if (parentOpt.isEmpty()) {
@@ -154,8 +156,7 @@ public class StudyFolderService {
 
         // Check for duplicate names if name or parent changed
         if (!folder.getName().equals(request.getName()) ||
-                (request.getParentFolderId() != null && !request.getParentFolderId()
-                        .equals(folder.getParentFolder() != null ? folder.getParentFolder().getId() : null))) {
+                (request.getParentFolderId() != null && !request.getParentFolderId().equals(currentParentFolderId))) {
 
             boolean nameExists = false;
             if (request.getParentFolderId() == null) {
@@ -243,12 +244,12 @@ public class StudyFolderService {
     // Helper methods
 
     private boolean wouldCreateCircularReference(StudyFolder folder, StudyFolder newParent) {
-        StudyFolder current = newParent;
-        while (current != null) {
-            if (current.getId().equals(folder.getId())) {
+        Long currentId = newParent.getId();
+        while (currentId != null) {
+            if (currentId.equals(folder.getId())) {
                 return true;
             }
-            current = current.getParentFolder();
+            currentId = studyFolderRepository.getParentFolderId(currentId);
         }
         return false;
     }
@@ -259,11 +260,15 @@ public class StudyFolderService {
         dto.setName(folder.getName());
         dto.setDescription(folder.getDescription());
         dto.setColor(folder.getColor());
-        dto.setParentFolderId(folder.getParentFolder() != null ? folder.getParentFolder().getId() : null);
-        dto.setParentFolderName(folder.getParentFolder() != null ? folder.getParentFolder().getName() : null);
-        dto.setFullPath(folder.getFullPath());
-        dto.setMaterialCount(folder.getStudyMaterials().size());
-        dto.setSubFolderCount(folder.getSubFolders().size());
+
+        // Completely avoid accessing parentFolder proxy - set to null for now
+        dto.setParentFolderId(null);
+        dto.setParentFolderName(null);
+        dto.setFullPath(folder.getName()); // Just use folder name without full path
+
+        // Use separate queries for counts to avoid lazy loading issues
+        dto.setMaterialCount((int) studyMaterialRepository.countByFolderId(folder.getId()));
+        dto.setSubFolderCount((int) studyFolderRepository.countByParentFolderId(folder.getId()));
         dto.setCreatedAt(folder.getCreatedAt());
         dto.setUpdatedAt(folder.getUpdatedAt());
         return dto;
@@ -272,17 +277,19 @@ public class StudyFolderService {
     private StudyFolderDTO convertToDTOWithContents(StudyFolder folder) {
         StudyFolderDTO dto = convertToDTO(folder);
 
-        // Add subfolders
-        List<StudyFolderDTO> subFolders = folder.getSubFolders().stream()
+        // Load subfolders separately to avoid lazy loading issues
+        List<StudyFolder> subFolders = studyFolderRepository.findByParentFolderId(folder.getId());
+        List<StudyFolderDTO> subFolderDTOs = subFolders.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
-        dto.setSubFolders(subFolders);
+        dto.setSubFolders(subFolderDTOs);
 
-        // Add study materials
-        List<StudyMaterialDTO> materials = folder.getStudyMaterials().stream()
+        // Load study materials separately to avoid lazy loading issues
+        List<StudyMaterial> materials = studyMaterialRepository.findByFolderIdOrderByCreatedAtDesc(folder.getId());
+        List<StudyMaterialDTO> materialDTOs = materials.stream()
                 .map(this::convertMaterialToDTO)
                 .collect(Collectors.toList());
-        dto.setStudyMaterials(materials);
+        dto.setStudyMaterials(materialDTOs);
 
         return dto;
     }

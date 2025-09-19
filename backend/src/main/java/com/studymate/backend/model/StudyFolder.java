@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.hibernate.Hibernate;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.CascadeType;
@@ -192,9 +194,9 @@ public class StudyFolder {
         material.setFolder(null);
     }
 
-    // Get full path of the folder
+    // Get full path of the folder - safe version that doesn't trigger lazy loading
     public String getFullPath() {
-        if (parentFolder == null) {
+        if (parentFolder == null || !Hibernate.isInitialized(parentFolder)) {
             return name;
         }
         return parentFolder.getFullPath() + "/" + name;
@@ -208,7 +210,10 @@ public class StudyFolder {
                 ", description='" + description + '\'' +
                 ", color='" + color + '\'' +
                 ", userId=" + userId +
-                ", parentFolder=" + (parentFolder != null ? parentFolder.getId() : null) +
+                ", parentFolderId="
+                + (parentFolder != null && Hibernate.isInitialized(parentFolder) ? parentFolder.getId()
+                        : "uninitialized")
+                +
                 '}';
     }
 }

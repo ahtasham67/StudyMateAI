@@ -81,7 +81,7 @@ public class KnowledgeGraphController {
             @RequestParam(defaultValue = "20") int size) {
 
         Pageable pageable = PageRequest.of(page, size);
-        Page<KnowledgeEntity> entities = entityRepository.searchEntities(query, pageable);
+        Page<KnowledgeEntity> entities = entityRepository.searchEntitiesWithRelations(query, pageable);
 
         Page<KnowledgeEntityResponse> response = entities.map(this::convertToResponse);
         return ResponseEntity.ok(response);
@@ -96,7 +96,7 @@ public class KnowledgeGraphController {
             @RequestParam(defaultValue = "20") int size) {
 
         Pageable pageable = PageRequest.of(page, size);
-        Page<KnowledgeEntity> entities = entityRepository.findMostFrequentEntities(pageable);
+        Page<KnowledgeEntity> entities = entityRepository.findMostFrequentEntitiesWithRelations(pageable);
 
         Page<KnowledgeEntityResponse> response = entities.map(this::convertToResponse);
         return ResponseEntity.ok(response);
@@ -107,7 +107,7 @@ public class KnowledgeGraphController {
      */
     @GetMapping("/entities/type/{entityType}")
     public ResponseEntity<List<KnowledgeEntityResponse>> getEntitiesByType(@PathVariable String entityType) {
-        List<KnowledgeEntity> entities = entityRepository.findByEntityTypeIgnoreCase(entityType);
+        List<KnowledgeEntity> entities = entityRepository.findByEntityTypeIgnoreCaseWithRelations(entityType);
 
         List<KnowledgeEntityResponse> response = entities.stream()
                 .map(this::convertToResponse)
@@ -121,7 +121,7 @@ public class KnowledgeGraphController {
      */
     @GetMapping("/entities/{entityId}/related")
     public ResponseEntity<List<KnowledgeEntityResponse>> getRelatedEntities(@PathVariable Long entityId) {
-        List<KnowledgeEntity> relatedEntities = entityRepository.findRelatedEntities(entityId);
+        List<KnowledgeEntity> relatedEntities = entityRepository.findRelatedEntitiesWithRelations(entityId);
 
         List<KnowledgeEntityResponse> response = relatedEntities.stream()
                 .map(this::convertToResponse)
@@ -135,7 +135,7 @@ public class KnowledgeGraphController {
      */
     @GetMapping("/entities/{entityId}")
     public ResponseEntity<KnowledgeEntityResponse> getEntityById(@PathVariable Long entityId) {
-        Optional<KnowledgeEntity> entityOpt = entityRepository.findById(entityId);
+        Optional<KnowledgeEntity> entityOpt = entityRepository.findByIdWithRelations(entityId);
         if (entityOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }

@@ -56,7 +56,7 @@ const ThreadDetail: React.FC = () => {
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
     message: string;
-    severity: "success" | "error";
+    severity: "success" | "error" | "info" | "warning";
   }>({
     open: false,
     message: "",
@@ -475,108 +475,153 @@ const ThreadDetail: React.FC = () => {
         >
           {/* Left Column - Thread Content and Reply Form */}
           <Box
-            sx={{ flex: 1, display: "flex", flexDirection: "column", pl: 2 }}
+            sx={{
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              pl: 2,
+              height: "calc(100vh - 200px)", // Fixed height to match right column
+              border: "1px solid rgba(255, 255, 255, 0.1)",
+              borderRadius: "16px",
+              background: "rgba(255, 255, 255, 0.02)",
+            }}
           >
-            {/* Thread Content */}
-            <Box sx={{ mb: 4 }}>
-              <Box
-                sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}
-              >
-                {thread.isPinned && (
-                  <PushPin sx={{ fontSize: 20, color: "#bb86fc" }} />
-                )}
-                {thread.isLocked && (
-                  <Lock sx={{ fontSize: 20, color: "#f44336" }} />
-                )}
-                <Typography
-                  variant="h4"
-                  sx={{
-                    fontWeight: 700,
-                    color: thread.isPinned ? "#bb86fc" : "text.primary",
-                  }}
+            {/* Scrollable Thread Content */}
+            <Box
+              sx={{
+                flex: 1,
+                overflow: "auto",
+                p: 3,
+                "&::-webkit-scrollbar": {
+                  width: "6px",
+                },
+                "&::-webkit-scrollbar-track": {
+                  background: "rgba(255, 255, 255, 0.1)",
+                  borderRadius: "3px",
+                },
+                "&::-webkit-scrollbar-thumb": {
+                  background: "rgba(187, 134, 252, 0.5)",
+                  borderRadius: "3px",
+                },
+                "&::-webkit-scrollbar-thumb:hover": {
+                  background: "rgba(187, 134, 252, 0.7)",
+                },
+              }}
+            >
+              {/* Thread Content */}
+              <Box sx={{ mb: 4 }}>
+                <Box
+                  sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}
                 >
-                  {thread.title}
+                  {thread.isPinned && (
+                    <PushPin sx={{ fontSize: 20, color: "#bb86fc" }} />
+                  )}
+                  {thread.isLocked && (
+                    <Lock sx={{ fontSize: 20, color: "#f44336" }} />
+                  )}
+                  <Typography
+                    variant="h4"
+                    sx={{
+                      fontWeight: 700,
+                      color: thread.isPinned ? "#bb86fc" : "text.primary",
+                    }}
+                  >
+                    {thread.title}
+                  </Typography>
+                </Box>
+
+                <Box sx={{ display: "flex", gap: 1, mb: 3 }}>
+                  <Chip
+                    label={thread.course}
+                    size="small"
+                    sx={{
+                      background:
+                        "linear-gradient(45deg, rgba(187, 134, 252, 0.1), rgba(3, 218, 198, 0.1))",
+                      border: "1px solid rgba(187, 134, 252, 0.3)",
+                      color: "#bb86fc",
+                    }}
+                  />
+                  <Chip
+                    label={thread.topic}
+                    size="small"
+                    variant="outlined"
+                    sx={{
+                      borderColor: "rgba(3, 218, 198, 0.3)",
+                      color: "#03dac6",
+                    }}
+                  />
+                </Box>
+
+                <Typography
+                  variant="body1"
+                  sx={{ mb: 4, whiteSpace: "pre-wrap", lineHeight: 1.7 }}
+                >
+                  {thread.content}
                 </Typography>
               </Box>
-
-              <Box sx={{ display: "flex", gap: 1, mb: 3 }}>
-                <Chip
-                  label={thread.course}
-                  size="small"
-                  sx={{
-                    background:
-                      "linear-gradient(45deg, rgba(187, 134, 252, 0.1), rgba(3, 218, 198, 0.1))",
-                    border: "1px solid rgba(187, 134, 252, 0.3)",
-                    color: "#bb86fc",
-                  }}
-                />
-                <Chip
-                  label={thread.topic}
-                  size="small"
-                  variant="outlined"
-                  sx={{
-                    borderColor: "rgba(3, 218, 198, 0.3)",
-                    color: "#03dac6",
-                  }}
-                />
-              </Box>
-
-              <Typography
-                variant="body1"
-                sx={{ mb: 4, whiteSpace: "pre-wrap", lineHeight: 1.7 }}
-              >
-                {thread.content}
-              </Typography>
             </Box>
 
-            {/* Reply Form */}
+            {/* Sticky Reply Form at Bottom */}
             {!thread.isLocked && (
-              <Card sx={{ mb: 4 }}>
-                <CardContent>
-                  <Typography variant="h6" sx={{ mb: 2 }}>
-                    {parentReplyId ? "Reply to comment" : "Add a reply"}
-                  </Typography>
-                  {parentReplyId && (
-                    <Alert severity="info" sx={{ mb: 2 }}>
-                      Replying to a comment.
-                      <Button
-                        size="small"
-                        onClick={() => {
-                          setParentReplyId(null);
-                          setReplyText("");
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                    </Alert>
-                  )}
-                  <TextField
-                    fullWidth
-                    multiline
-                    rows={4}
-                    placeholder="Write your reply..."
-                    value={replyText}
-                    onChange={(e) => setReplyText(e.target.value)}
-                    sx={{ mb: 2 }}
-                  />
-                  <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+              <Box
+                sx={{
+                  p: 3,
+                  borderTop: "1px solid rgba(255, 255, 255, 0.1)",
+                  background: "rgba(255, 255, 255, 0.02)",
+                  backdropFilter: "blur(10px)",
+                }}
+              >
+                <Typography variant="h6" sx={{ mb: 2 }}>
+                  {parentReplyId ? "Reply to comment" : "Add a reply"}
+                </Typography>
+                {parentReplyId && (
+                  <Alert severity="info" sx={{ mb: 2 }}>
+                    Replying to a comment.
                     <Button
-                      variant="contained"
-                      endIcon={<Send />}
-                      onClick={handleReplySubmit}
-                      disabled={!replyText.trim()}
+                      size="small"
+                      onClick={() => {
+                        setParentReplyId(null);
+                        setReplyText("");
+                      }}
                     >
-                      Post Reply
+                      Cancel
                     </Button>
-                  </Box>
-                </CardContent>
-              </Card>
+                  </Alert>
+                )}
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={4}
+                  placeholder="Write your reply..."
+                  value={replyText}
+                  onChange={(e) => setReplyText(e.target.value)}
+                  sx={{ mb: 2 }}
+                />
+                <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+                  <Button
+                    variant="contained"
+                    endIcon={<Send />}
+                    onClick={handleReplySubmit}
+                    disabled={!replyText.trim()}
+                  >
+                    Post Reply
+                  </Button>
+                </Box>
+              </Box>
             )}
 
             {thread.isLocked && (
-              <Alert severity="warning" sx={{ mb: 4 }}>
-                This thread is locked. No new replies can be added.
-              </Alert>
+              <Box
+                sx={{
+                  p: 3,
+                  borderTop: "1px solid rgba(255, 255, 255, 0.1)",
+                  background: "rgba(255, 255, 255, 0.02)",
+                }}
+              >
+                <Alert severity="warning">
+                  This thread is locked. No new replies can be added.
+                </Alert>
+              </Box>
             )}
           </Box>
 
@@ -589,6 +634,7 @@ const ThreadDetail: React.FC = () => {
               border: "1px solid rgba(255, 255, 255, 0.1)",
               borderRadius: "16px",
               background: "rgba(255, 255, 255, 0.02)",
+              height: "calc(100vh - 200px)", // Fixed height for better scrolling
             }}
           >
             <Box
@@ -599,6 +645,7 @@ const ThreadDetail: React.FC = () => {
               </Typography>
             </Box>
 
+            {/* Scrollable Replies Content */}
             <Box
               sx={{
                 flex: 1,
@@ -655,23 +702,43 @@ const ThreadDetail: React.FC = () => {
                   {replies.map((reply) => (
                     <ReplyCard key={reply.id} reply={reply} />
                   ))}
-
-                  {totalReplyPages > 1 && (
-                    <Box
-                      sx={{ display: "flex", justifyContent: "center", mt: 4 }}
-                    >
-                      <Pagination
-                        count={totalReplyPages}
-                        page={replyPage + 1}
-                        onChange={(_, newPage) => setReplyPage(newPage - 1)}
-                        color="primary"
-                        size="small"
-                      />
-                    </Box>
-                  )}
                 </>
               )}
             </Box>
+
+            {/* Sticky Pagination at Bottom */}
+            {totalReplyPages > 1 && !repliesLoading && replies.length > 0 && (
+              <Box
+                sx={{
+                  p: 2,
+                  borderTop: "1px solid rgba(255, 255, 255, 0.1)",
+                  display: "flex",
+                  justifyContent: "center",
+                  background: "rgba(255, 255, 255, 0.02)",
+                  backdropFilter: "blur(10px)",
+                }}
+              >
+                <Pagination
+                  count={totalReplyPages}
+                  page={replyPage + 1}
+                  onChange={(_, newPage) => setReplyPage(newPage - 1)}
+                  color="primary"
+                  size="small"
+                  sx={{
+                    "& .MuiPaginationItem-root": {
+                      color: "rgba(255, 255, 255, 0.7)",
+                      "&:hover": {
+                        backgroundColor: "rgba(187, 134, 252, 0.1)",
+                      },
+                      "&.Mui-selected": {
+                        backgroundColor: "rgba(187, 134, 252, 0.3)",
+                        color: "#fff",
+                      },
+                    },
+                  }}
+                />
+              </Box>
+            )}
           </Box>
         </Box>
 

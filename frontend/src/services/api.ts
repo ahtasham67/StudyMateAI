@@ -355,6 +355,27 @@ export const discussionAPI = {
     return api.get(`/discussions/threads/search/enhanced?${params}`);
   },
 
+  // Advanced search with relevance scoring
+  searchThreadsAdvanced: (
+    query: string,
+    course?: string,
+    page = 0,
+    size = 10
+  ): Promise<AxiosResponse<ThreadsResponse>> => {
+    const params = new URLSearchParams({
+      q: query.trim(),
+      page: page.toString(),
+      size: size.toString(),
+    });
+    if (course) params.append("course", course);
+
+    // Clean up search query - handle multiple keywords
+    const cleanQuery = query.trim().toLowerCase();
+    params.set("q", cleanQuery);
+
+    return api.get(`/discussions/threads/search/enhanced?${params}`);
+  },
+
   getPinnedThreads: (
     page = 0,
     size = 10
@@ -520,6 +541,81 @@ export const scheduleAPI = {
     status: string
   ): Promise<AxiosResponse<any>> =>
     api.patch(`/schedules/${id}/status`, { status }),
+};
+
+// Wikipedia API for quick overviews
+export const wikipediaAPI = {
+  // Get Wikipedia summary for a topic
+  getTopicSummary: async (
+    query: string
+  ): Promise<{ summary: string; url: string; title: string } | null> => {
+    try {
+      // First, search for the topic
+      const searchResponse = await axios.get(
+        `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(
+          query
+        )}`,
+        {
+          headers: {
+            "User-Agent": "StudyMateAI/1.0 (https://studymateai.com)",
+          },
+        }
+      );
+
+      if (searchResponse.data && searchResponse.data.extract) {
+        return {
+          summary: searchResponse.data.extract,
+          url: searchResponse.data.content_urls?.desktop?.page || "",
+          title: searchResponse.data.title || query,
+        };
+      }
+
+      return null;
+    } catch (error) {
+      console.error("Wikipedia API error:", error);
+      return null;
+    }
+  },
+
+  // Search for Wikipedia articles
+  searchArticles: async (query: string): Promise<string[]> => {
+    try {
+      const response = await axios.get(
+        `https://en.wikipedia.org/api/rest_v1/page/search/${encodeURIComponent(
+          query
+        )}`,
+        {
+          headers: {
+            "User-Agent": "StudyMateAI/1.0 (https://studymateai.com)",
+          },
+        }
+      );
+
+      return response.data.pages?.map((page: any) => page.title) || [];
+    } catch (error) {
+      console.error("Wikipedia search error:", error);
+      return [];
+    }
+  },
+};
+
+// Help Resources API
+export const helpResourcesAPI = {
+  // Get help resources for a specific study material
+  getResourcesForMaterial: async (materialId: number, customQuery?: string) => {
+    const params = customQuery ? { customQuery } : {};
+    return api.get(`/help-resources/material/${materialId}`, { params });
+  },
+
+  // Search help resources with custom query
+  searchResources: async (request: {
+    materialContent?: string;
+    materialTitle?: string;
+    searchQuery?: string;
+    maxResults?: number;
+  }) => {
+    return api.post("/help-resources/search", request);
+  },
 };
 
 export default api;

@@ -3,6 +3,7 @@ package com.studymate.backend.repository;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -32,6 +33,11 @@ public interface StudyMaterialRepository extends JpaRepository<StudyMaterial, Lo
 
         // Folder-related queries
         List<StudyMaterial> findByUserIdAndFolderIsNullOrderByCreatedAtDesc(Long userId);
+
+        // Find unorganized materials with folder association fetched
+        @EntityGraph(attributePaths = { "folder" })
+        @Query("SELECT sm FROM StudyMaterial sm WHERE sm.userId = :userId AND sm.folder IS NULL ORDER BY sm.createdAt DESC")
+        List<StudyMaterial> findUnorganizedMaterialsWithFolder(@Param("userId") Long userId);
 
         List<StudyMaterial> findByUserIdAndFolderIdOrderByCreatedAtDesc(Long userId, Long folderId);
 

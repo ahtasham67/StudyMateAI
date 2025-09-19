@@ -294,3 +294,39 @@ export interface ThreadsResponse extends ApiResponse {
   totalPages: number;
   currentPage: number;
 }
+
+// Help Resources Types
+export interface VideoResource {
+  title: string;
+  description: string;
+  url: string;
+  thumbnailUrl: string;
+  channel: string;
+  duration: string;
+  publishedDate: string;
+}
+
+export interface ArticleResource {
+  title: string;
+  description: string;
+  url: string;
+  source: string;
+  author: string;
+  publishedDate: string;
+  thumbnailUrl: string;
+}
+
+export interface HelpResourcesResponse {
+  videos: VideoResource[];
+  articles: ArticleResource[];
+  blogs: ArticleResource[];
+  searchQuery: string;
+  totalResults: number;
+}
+
+export interface HelpResourcesRequest {
+  materialContent?: string;
+  materialTitle?: string;
+  searchQuery?: string;
+  maxResults?: number;
+}
