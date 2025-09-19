@@ -83,19 +83,3 @@ services:
 # Note: Database is already set up in Supabase, so no database service is defined here.
 # The backend will connect to your existing Supabase PostgreSQL instance using the
 # connection details from your application.properties file.
-
-# Deployment Configuration
-previewsEnabled: true
-rootDir: .
-
-# Build settings
-buildFilter:
-  paths:
-    - backend/**
-    - frontend/**
-  ignoredPaths:
-    - "*.md"
-    - ".git/**"
-    - "node_modules/**"
-    - "target/**"
-    - "build/**"
