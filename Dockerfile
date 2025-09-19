@@ -61,8 +61,9 @@ COPY nginx-unified.conf /etc/nginx/nginx.conf
 # Create upload directory
 RUN mkdir -p /app/uploads && chown -R studymate:studymate /app
 
-# Set permissions for nginx
-RUN chown -R studymate:studymate /usr/share/nginx/html && \
+# Ensure /var/cache/nginx exists before chown, then set permissions for nginx
+RUN mkdir -p /var/cache/nginx && \
+    chown -R studymate:studymate /usr/share/nginx/html && \
     chown -R studymate:studymate /var/cache/nginx && \
     chown -R studymate:studymate /var/log/nginx && \
     chown -R studymate:studymate /etc/nginx && \
