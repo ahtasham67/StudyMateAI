@@ -26,7 +26,7 @@ import com.studymate.backend.service.DiscussionThreadService;
 import com.studymate.backend.service.KnowledgeGraphService;
 
 @RestController
-@RequestMapping("/knowledge")
+@RequestMapping("/api/knowledge")
 @CrossOrigin(origins = "*", maxAge = 3600)
 public class KnowledgeGraphController {
 

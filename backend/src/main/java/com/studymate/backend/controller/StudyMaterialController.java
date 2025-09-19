@@ -26,7 +26,7 @@ import com.studymate.backend.model.User;
 import com.studymate.backend.service.StudyMaterialService;
 
 @RestController
-@RequestMapping("/study-materials")
+@RequestMapping("/api/study-materials")
 @CrossOrigin(origins = "*", maxAge = 3600)
 public class StudyMaterialController {
 

@@ -29,8 +29,8 @@ import com.studymate.backend.model.User;
 import com.studymate.backend.service.StudyScheduleService;
 
 @RestController
-@RequestMapping("/schedules")
-@CrossOrigin(origins = "http://localhost:3000")
+@RequestMapping("/api/schedules")
+@CrossOrigin(origins = "*", maxAge = 3600)
 public class StudyScheduleController {
 
     private static final Logger logger = LoggerFactory.getLogger(StudyScheduleController.class);

@@ -28,8 +28,8 @@ import jakarta.annotation.PostConstruct;
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/discussions")
-@CrossOrigin(origins = "http://localhost:3000")
+@RequestMapping("/api/discussions")
+@CrossOrigin(origins = "*", maxAge = 3600)
 public class DiscussionThreadController {
 
     @Autowired

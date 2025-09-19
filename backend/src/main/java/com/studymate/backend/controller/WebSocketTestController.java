@@ -19,8 +19,8 @@ import com.studymate.backend.model.User;
 import com.studymate.backend.service.DiscussionWebSocketService;
 
 @RestController
-@RequestMapping("/test")
-@CrossOrigin(origins = "http://localhost:3000")
+@RequestMapping("/api/test")
+@CrossOrigin(origins = "*", maxAge = 3600)
 public class WebSocketTestController {
 
     @Autowired

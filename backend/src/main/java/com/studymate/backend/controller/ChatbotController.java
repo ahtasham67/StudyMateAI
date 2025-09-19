@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.CrossOrigin;
 
 import com.studymate.backend.dto.ChatbotQuestionRequest;
 import com.studymate.backend.dto.ChatbotResponse;
@@ -27,7 +28,8 @@ import jakarta.validation.Valid;
  * Provides AI-powered summarization and Q&A for study materials
  */
 @RestController
-@RequestMapping("/chatbot")
+@RequestMapping("/api/chatbot")
+@CrossOrigin(origins = "*", maxAge = 3600)
 public class ChatbotController {
 
     private static final Logger logger = LoggerFactory.getLogger(ChatbotController.class);

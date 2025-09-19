@@ -31,7 +31,7 @@ import jakarta.validation.Valid;
  * Provides CRUD operations for organizing study materials in folders
  */
 @RestController
-@RequestMapping("/folders")
+@RequestMapping("/api/folders")
 public class StudyFolderController {
 
     private static final Logger logger = LoggerFactory.getLogger(StudyFolderController.class);

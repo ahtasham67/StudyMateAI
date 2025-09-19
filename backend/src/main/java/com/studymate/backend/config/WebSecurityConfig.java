@@ -69,10 +69,6 @@ public class WebSecurityConfig {
                         .requestMatchers("/*.js", "/*.css", "/*.png", "/*.jpg", "/*.jpeg", "/*.gif", "/*.svg").permitAll()
                         // Allow API authentication endpoints
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/discussions/**").permitAll()
-                        .requestMatchers("/api/public/**").permitAll()
-                        .requestMatchers("/api/profile/photo/**").permitAll()
-                        .requestMatchers("/api/schedules/**").permitAll()
                         // Allow health check endpoint for Render
                         .requestMatchers("/api/actuator/health").permitAll()
                         // All API requests require authentication

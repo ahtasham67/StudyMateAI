@@ -24,7 +24,7 @@ import com.studymate.backend.service.QuizService;
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/quizzes")
+@RequestMapping("/api/quizzes")
 @CrossOrigin(origins = "*", maxAge = 3600)
 public class QuizController {
 

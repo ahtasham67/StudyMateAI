@@ -31,7 +31,7 @@ import com.studymate.backend.service.StudyMaterialService;
 import jakarta.annotation.PostConstruct;
 
 @RestController
-@RequestMapping("/help-resources")
+@RequestMapping("/api/help-resources")
 @CrossOrigin(origins = "*", maxAge = 3600)
 public class HelpResourcesController {
 
