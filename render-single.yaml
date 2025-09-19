@@ -46,7 +46,3 @@ services:
         value: "50MB"
       - key: MAX_REQUEST_SIZE
         value: "50MB"
-# Note: This unified deployment serves both frontend and backend from one URL
-# Frontend: https://studymate-app.onrender.com
-# Backend API: https://studymate-app.onrender.com/api
-# WebSocket: wss://studymate-app.onrender.com/api/ws
