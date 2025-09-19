@@ -64,12 +64,21 @@ public class WebSecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authz -> authz
-                        .requestMatchers("/auth/**").permitAll()
-                        .requestMatchers("/discussions/**").permitAll()
-                        .requestMatchers("/public/**").permitAll()
-                        .requestMatchers("/profile/photo/**").permitAll()
-                        .requestMatchers("/schedules/**").permitAll()
-                        .anyRequest().authenticated());
+                        // Allow static resources (React frontend)
+                        .requestMatchers("/", "/static/**", "/favicon.ico", "/manifest.json", "/robots.txt").permitAll()
+                        .requestMatchers("/*.js", "/*.css", "/*.png", "/*.jpg", "/*.jpeg", "/*.gif", "/*.svg").permitAll()
+                        // Allow API authentication endpoints
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/discussions/**").permitAll()
+                        .requestMatchers("/api/public/**").permitAll()
+                        .requestMatchers("/api/profile/photo/**").permitAll()
+                        .requestMatchers("/api/schedules/**").permitAll()
+                        // Allow health check endpoint for Render
+                        .requestMatchers("/api/actuator/health").permitAll()
+                        // All API requests require authentication
+                        .requestMatchers("/api/**").authenticated()
+                        // Allow all other requests (for React Router)
+                        .anyRequest().permitAll());
 
         http.authenticationProvider(authenticationProvider());
         http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
