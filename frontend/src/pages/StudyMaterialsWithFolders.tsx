@@ -70,6 +70,10 @@ interface StudyMaterial {
     name: string;
     description?: string;
   };
+  // Properties from folder materials response
+  folderId?: number;
+  folderName?: string;
+  folderPath?: string;
 }
 
 interface StudyFolder {
@@ -235,8 +239,8 @@ const StudyMaterialsWithFolders: React.FC = () => {
   const getFilteredContent = () => {
     const folderMaterials = materials.filter((material) =>
       selectedFolderId
-        ? material.folder?.id === selectedFolderId
-        : !material.folder
+        ? (material.folder?.id === selectedFolderId || material.folderId === selectedFolderId)
+        : (!material.folder && !material.folderId)
     );
     const folderNotes = notes.filter((note) =>
       selectedFolderId ? note.folder?.id === selectedFolderId : !note.folder
