@@ -1,6 +1,7 @@
 package com.studymate.backend.model;
 
 import java.time.LocalDateTime;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -8,6 +9,9 @@ import java.util.Set;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -62,6 +66,7 @@ public class User implements UserDetails {
     private String profilePhotoUrl;
 
     @Column(name = "profile_photo_data", columnDefinition = "bytea")
+    @JsonIgnore
     private byte[] profilePhotoData;
 
     @Column(name = "profile_photo_content_type")
@@ -211,6 +216,14 @@ public class User implements UserDetails {
 
     public byte[] getProfilePhotoData() {
         return profilePhotoData;
+    }
+
+    @JsonProperty("profilePhotoData")
+    public String getProfilePhotoDataBase64() {
+        if (profilePhotoData == null) {
+            return null;
+        }
+        return Base64.getEncoder().encodeToString(profilePhotoData);
     }
 
     public void setProfilePhotoData(byte[] profilePhotoData) {

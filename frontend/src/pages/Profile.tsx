@@ -23,6 +23,7 @@ const Profile: React.FC = () => {
   const [photoLoading, setPhotoLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [avatarKey, setAvatarKey] = useState(0); // Force avatar re-render
   const [profile, setProfile] = useState<ProfileUpdateRequest>({
     firstName: "",
     lastName: "",
@@ -106,14 +107,25 @@ const Profile: React.FC = () => {
       formData.append("photo", file);
 
       const response = await profileAPI.uploadProfilePhoto(formData);
+      
+      console.log("Profile photo upload response:", response.data);
+      
       // Update user data immediately to show the photo
       updateUser(response.data);
       setSuccess("Profile photo updated successfully!");
-
-      // Refresh the page to ensure the photo displays instantly
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
+      
+      // Force avatar re-render
+      setAvatarKey(prev => prev + 1);
+      
+      // Also fetch fresh profile data to ensure consistency
+      try {
+        const profileResponse = await profileAPI.getProfile();
+        console.log("Fresh profile data:", profileResponse.data);
+        updateUser(profileResponse.data);
+        setAvatarKey(prev => prev + 1);
+      } catch (fetchError) {
+        console.warn("Could not fetch updated profile data:", fetchError);
+      }
     } catch (err: any) {
       console.error("Upload photo error:", err);
       setError(
@@ -126,7 +138,19 @@ const Profile: React.FC = () => {
   };
 
   const getProfilePhotoUrl = () => {
-    if (!user?.profilePhotoUrl) return null;
+    if (!user) return null;
+    
+    // First try to use base64 data if available
+    if (user.profilePhotoData && user.profilePhotoContentType) {
+      const dataUrl = `data:${user.profilePhotoContentType};base64,${user.profilePhotoData}`;
+      console.log("Profile: Using base64 data URL for photo");
+      return dataUrl;
+    }
+    
+    // Fallback to URL-based approach
+    if (!user.profilePhotoUrl) return null;
+    
+    console.log("Profile: Using URL-based approach:", user.profilePhotoUrl);
     
     // If it's already a full URL, return as is
     if (user.profilePhotoUrl.startsWith('http://') || user.profilePhotoUrl.startsWith('https://')) {
@@ -173,6 +197,7 @@ const Profile: React.FC = () => {
           <Box sx={{ display: "flex", alignItems: "center", mb: 4 }}>
             <Box sx={{ position: "relative", mr: 3 }}>
               <Avatar
+                key={avatarKey}
                 sx={{ width: 100, height: 100 }}
                 src={getProfilePhotoUrl() || undefined}
               >
