@@ -1,57 +1,89 @@
-# Frontend Dockerfile for StudyMateAI React Application
-# Multi-stage build for optimized production deployment
+# Unified Dockerfile for StudyMateAI - Single Service Deployment
+# Builds React frontend and serves it alongside Spring Boot backend
 
-# Stage 1: Build stage
-FROM node:18-alpine AS build
+# Stage 1: Build React Frontend
+FROM node:18-alpine AS frontend-build
 
-# Set working directory
-WORKDIR /app
+WORKDIR /app/frontend
 
-# Copy package.json and package-lock.json (if exists)
-COPY package*.json ./
+# Copy frontend package files
+COPY frontend/package*.json ./
 
-# Install all dependencies (including devDependencies needed for build)
+# Install frontend dependencies
 RUN npm ci --silent
 
-# Copy all source files
-COPY . .
+# Copy frontend source
+COPY frontend/ ./
 
-# Build the React app for production
+# Build frontend for production
 RUN npm run build
 
-# Stage 2: Production stage with Nginx
-FROM nginx:alpine
+# Stage 2: Build Spring Boot Backend
+FROM maven:3.9-eclipse-temurin-17 AS backend-build
 
-# Install curl for health checks
-RUN apk add --no-cache curl
+WORKDIR /app/backend
 
-# Remove default nginx static assets
-RUN rm -rf /usr/share/nginx/html/*
+# Copy backend pom.xml
+COPY backend/pom.xml ./
 
-# Copy built React app from build stage
-COPY --from=build /app/build /usr/share/nginx/html
+# Download backend dependencies offline
+RUN mvn dependency:go-offline -B
 
-# Copy custom nginx configuration file
-COPY nginx.conf /etc/nginx/nginx.conf
+# Copy backend source code
+COPY backend/src ./src
 
-# Create nginx cache directory if missing and set permissions
-RUN mkdir -p /var/cache/nginx && \
-    chown -R nginx:nginx /usr/share/nginx/html && \
-    chown -R nginx:nginx /var/cache/nginx && \
-    chown -R nginx:nginx /var/log/nginx && \
-    chown -R nginx:nginx /etc/nginx/conf.d && \
-    touch /var/run/nginx.pid && \
-    chown -R nginx:nginx /var/run/nginx.pid
+# Build backend JAR skipping tests
+RUN mvn clean package -DskipTests -B
 
-# Switch to nginx user for security
-USER nginx
+# Stage 3: Production Runtime
+FROM openjdk:17-jdk-slim
 
-# Expose port 3000 (make sure nginx.conf listens on this port)
-EXPOSE 3000
+# Install nginx and curl
+RUN apt-get update && apt-get install -y \
+    nginx \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
-# Health check to verify nginx is serving correctly
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:3000 || exit 1
+# Create non-root user/group
+RUN groupadd -r studymate && useradd -r -g studymate studymate
 
-# Start nginx in foreground
-CMD ["nginx", "-g", "daemon off;"]
+WORKDIR /app
+
+# Copy built backend JAR
+COPY --from=backend-build /app/backend/target/*.jar app.jar
+
+# Copy built frontend to nginx directory
+COPY --from=frontend-build /app/frontend/build /usr/share/nginx/html
+
+# Copy nginx unified configuration
+COPY nginx-unified.conf /etc/nginx/nginx.conf
+
+# Create necessary directories with correct ownership
+RUN mkdir -p /app/uploads && \
+    mkdir -p /var/cache/nginx && \
+    mkdir -p /var/log/nginx && \
+    chown -R studymate:studymate /app /usr/share/nginx/html /var/cache/nginx /var/log/nginx /etc/nginx
+
+# Prepare nginx pid file and fix ownership
+RUN touch /var/run/nginx.pid && \
+    chown studymate:studymate /var/run/nginx.pid
+
+# Copy startup script and set ownership before changing user
+COPY start-unified.sh /app/start-unified.sh
+RUN chown studymate:studymate /app/start-unified.sh && chmod +x /app/start-unified.sh
+
+# Switch to non-root user after all ownership and permissions are set
+USER studymate
+
+# Expose port 8080 (Spring Boot + nginx unified)
+EXPOSE 8080
+
+# Health check for unified service
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8080/api/actuator/health || exit 1
+
+# JVM options for container optimization
+ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+UseG1GC -XX:+UseStringDeduplication"
+
+# Entrypoint: run startup script to launch nginx + Spring Boot
+ENTRYPOINT ["/app/start-unified.sh"]
