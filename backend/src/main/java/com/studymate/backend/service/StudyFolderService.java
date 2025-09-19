@@ -49,6 +49,9 @@ public class StudyFolderService {
     @Transactional(readOnly = true)
     public Optional<StudyFolderDTO> getFolderWithContents(Long folderId, Long userId) {
         logger.info("Getting folder {} with contents for user {}", folderId, userId);
+        
+        // Use the base query without fetching to avoid MultipleBagFetchException
+        // The convertToDTOWithContents method will handle loading subfolders and materials separately
         Optional<StudyFolder> folderOpt = studyFolderRepository.findByIdWithContentsAndUserId(folderId, userId);
         return folderOpt.map(this::convertToDTOWithContents);
     }

@@ -40,12 +40,23 @@ public interface StudyFolderRepository extends JpaRepository<StudyFolder, Long> 
         @Query("SELECT f FROM StudyFolder f WHERE f.id = :folderId AND f.userId = :userId")
         Optional<StudyFolder> findByIdAndUserId(@Param("folderId") Long folderId, @Param("userId") Long userId);
 
-        // Get folder with its materials and subfolders
+        // Get folder with its materials and subfolders (using separate queries to avoid MultipleBagFetchException)
+        @Query("SELECT f FROM StudyFolder f WHERE f.id = :folderId AND f.userId = :userId")
+        Optional<StudyFolder> findByIdWithContentsAndUserId(@Param("folderId") Long folderId,
+                        @Param("userId") Long userId);
+
+        // Get folder with study materials fetched
         @Query("SELECT DISTINCT f FROM StudyFolder f " +
                         "LEFT JOIN FETCH f.studyMaterials " +
+                        "WHERE f.id = :folderId AND f.userId = :userId")
+        Optional<StudyFolder> findByIdWithMaterialsAndUserId(@Param("folderId") Long folderId,
+                        @Param("userId") Long userId);
+
+        // Get folder with subfolders fetched
+        @Query("SELECT DISTINCT f FROM StudyFolder f " +
                         "LEFT JOIN FETCH f.subFolders " +
                         "WHERE f.id = :folderId AND f.userId = :userId")
-        Optional<StudyFolder> findByIdWithContentsAndUserId(@Param("folderId") Long folderId,
+        Optional<StudyFolder> findByIdWithSubfoldersAndUserId(@Param("folderId") Long folderId,
                         @Param("userId") Long userId);
 
         // Search folders by name (case-insensitive)
