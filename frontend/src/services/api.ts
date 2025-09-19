@@ -233,8 +233,14 @@ export const folderAPI = {
   searchFolders: (query: string): Promise<AxiosResponse<any[]>> =>
     api.get(`/folders/search?q=${encodeURIComponent(query)}`),
 
-  getMaterialsInFolder: (folderId: number): Promise<AxiosResponse<any[]>> =>
-    api.get(`/study-materials/folder/${folderId}`),
+  getMaterialsInFolder: async (folderId: number): Promise<AxiosResponse<any[]>> => {
+    const response = await api.get(`/folders/${folderId}`);
+    // Extract studyMaterials from the folder response
+    return {
+      ...response,
+      data: response.data.studyMaterials || []
+    };
+  },
 
   getUnorganizedMaterials: (): Promise<AxiosResponse<any[]>> =>
     api.get("/study-materials/unorganized"),
