@@ -304,7 +304,7 @@ cd frontend && npm test
 
 ## 📦 Production Deployment
 
-### Build for Production
+### Local Production Build
 
 ```bash
 # Build backend JAR
@@ -316,6 +316,277 @@ cd frontend && npm run build
 # Or use production script
 ./start-prod.sh
 ```
+
+## 🚀 Render Deployment Guide
+
+Deploy your StudyMateAI application to Render with Supabase database in just a few steps!
+
+### Prerequisites
+- **Render Account**: [Sign up at render.com](https://render.com)
+- **Supabase Database**: Already configured ✅
+- **GitHub Repository**: Code pushed to GitHub
+- **Gemini API Key**: Get from [Google AI Studio](https://aistudio.google.com/)
+
+### 🎯 Quick Deploy (Recommended)
+
+#### Option 1: One-Click Deploy with Blueprint
+1. **Fork/Clone** this repository to your GitHub account
+2. **Connect to Render**:
+   - Go to [Render Dashboard](https://dashboard.render.com)
+   - Click "New" → "Blueprint"
+   - Connect your GitHub repository
+   - Select the `StudyMateAI` repository
+
+3. **Configure Environment Variables**:
+   ```bash
+   # REQUIRED: Add these in Render Dashboard
+   GEMINI_API_KEY=your_gemini_api_key_here
+   ```
+
+4. **Deploy**: Render will automatically deploy both services!
+
+#### Option 2: Manual Service Creation
+
+##### Backend Service Setup
+1. **Create Web Service**:
+   - Go to Render Dashboard → "New" → "Web Service"
+   - Connect your GitHub repository
+   - **Name**: `studymate-backend`
+   - **Runtime**: `Docker`
+   - **Region**: Choose closest to your location
+   - **Branch**: `main`
+   - **Dockerfile Path**: `./backend/Dockerfile`
+
+2. **Environment Variables**:
+   ```bash
+   # Required
+   GEMINI_API_KEY=your_gemini_api_key_here
+   
+   # Auto-configured
+   PORT=8080
+   SPRING_PROFILES_ACTIVE=production
+   JWT_SECRET=auto_generated
+   ```
+
+3. **Deploy Settings**:
+   - **Auto-Deploy**: Enable
+   - **Health Check Path**: `/actuator/health`
+
+##### Frontend Service Setup
+1. **Create Web Service**:
+   - Name: `studymate-frontend`
+   - Runtime: `Docker`
+   - Dockerfile Path: `./frontend/Dockerfile`
+
+2. **Environment Variables**:
+   ```bash
+   PORT=3000
+   NODE_ENV=production
+   REACT_APP_API_URL=https://studymate-backend.onrender.com
+   REACT_APP_WS_URL=wss://studymate-backend.onrender.com
+   ```
+
+### 🔧 Environment Configuration
+
+#### Required Environment Variables
+
+| Variable | Service | Value | Notes |
+|----------|---------|-------|-------|
+| `GEMINI_API_KEY` | Backend | Your API key | Get from Google AI Studio |
+| `JWT_SECRET` | Backend | Auto-generated | Render will generate this |
+| `REACT_APP_API_URL` | Frontend | Backend URL | Auto-populated by Render |
+
+#### Optional Customizations
+
+```bash
+# Database Pool Settings
+DB_POOL_SIZE=8
+DB_MIN_IDLE=2
+
+# File Upload Limits
+MAX_FILE_SIZE=50MB
+MAX_REQUEST_SIZE=50MB
+
+# CORS Configuration
+CORS_ALLOWED_ORIGINS=https://your-frontend.onrender.com
+```
+
+### 🔐 Security Configuration
+
+#### 1. Get Gemini API Key
+```bash
+# Visit Google AI Studio
+https://aistudio.google.com/
+
+# Create new API key
+# Copy the key for Render environment variables
+```
+
+#### 2. Configure Environment Variables in Render
+```bash
+# Go to your service → Environment
+# Add variables marked as "Required" in .env.template
+# Render encrypts all environment variables automatically
+```
+
+### 📊 Monitoring & Health Checks
+
+#### Backend Health Check
+- **Endpoint**: `/actuator/health`
+- **Expected Response**: `200 OK`
+- **Monitors**: Database connectivity, application status
+
+#### Frontend Health Check
+- **Endpoint**: `/health`
+- **Expected Response**: `200 OK`
+- **Monitors**: Nginx server status
+
+#### View Logs
+```bash
+# In Render Dashboard
+# Go to Service → Logs
+# Monitor real-time application logs
+# Filter by timestamp and log level
+```
+
+### 🔄 Deployment Process
+
+#### Automatic Deployment
+1. **Push to GitHub**: Changes trigger automatic deployment
+2. **Build Process**: Render builds Docker images
+3. **Health Checks**: Services start after successful health checks
+4. **Live Update**: Zero-downtime deployment
+
+#### Manual Deployment
+```bash
+# In Render Dashboard
+# Go to Service → Settings
+# Click "Manual Deploy" → "Deploy latest commit"
+```
+
+### 🎯 Access Your Application
+
+#### Service URLs
+```bash
+# Backend API
+https://studymate-backend.onrender.com
+
+# Frontend Application  
+https://studymate-frontend.onrender.com
+
+# API Health Check
+https://studymate-backend.onrender.com/actuator/health
+```
+
+#### API Testing
+```bash
+# Test authentication endpoint
+curl https://studymate-backend.onrender.com/api/auth/me
+
+# Test health endpoint
+curl https://studymate-backend.onrender.com/actuator/health
+```
+
+### 🐛 Troubleshooting
+
+#### Common Issues
+
+1. **Build Failures**
+   ```bash
+   # Check Dockerfile syntax
+   # Verify Java/Node versions
+   # Review build logs in Render Dashboard
+   ```
+
+2. **Environment Variable Issues**
+   ```bash
+   # Verify GEMINI_API_KEY is set
+   # Check database connection strings
+   # Confirm CORS origins match frontend URL
+   ```
+
+3. **Database Connection Issues**
+   ```bash
+   # Verify Supabase credentials
+   # Check connection pool settings
+   # Review PostgreSQL logs
+   ```
+
+4. **Memory/Performance Issues**
+   ```bash
+   # Upgrade to higher Render plan
+   # Optimize JVM settings
+   # Review connection pool sizes
+   ```
+
+#### Debug Commands
+```bash
+# View environment variables
+echo $GEMINI_API_KEY
+
+# Check Java memory
+java -XX:+PrintFlagsFinal -version | grep -i heapsize
+
+# Test database connection
+curl -X GET https://studymate-backend.onrender.com/actuator/health
+```
+
+### 📈 Performance Optimization
+
+#### Backend Optimizations
+- **JVM Settings**: Optimized for containerized environments
+- **Connection Pooling**: Configured for Render infrastructure
+- **Health Checks**: Minimal overhead monitoring
+
+#### Frontend Optimizations
+- **Nginx Compression**: Gzip enabled for all assets
+- **Static Caching**: Long-term caching for assets
+- **Bundle Optimization**: Production builds minimized
+
+### 💰 Cost Management
+
+#### Render Pricing Tiers
+- **Starter Plan**: $7/month per service (Recommended)
+- **Standard Plan**: $25/month per service (High traffic)
+- **Pro Plan**: $85/month per service (Enterprise)
+
+#### Cost Optimization Tips
+```bash
+# Use Starter plans for development
+# Monitor resource usage in dashboard
+# Optimize build times to reduce costs
+# Use efficient Docker images
+```
+
+### 🔄 Continuous Integration
+
+#### GitHub Actions (Optional)
+```yaml
+# .github/workflows/deploy.yml
+name: Deploy to Render
+on:
+  push:
+    branches: [main]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Trigger Render Deploy
+        run: |
+          curl -X POST https://api.render.com/deploy/srv-xxx
+```
+
+### 📚 Additional Resources
+
+- **Render Documentation**: [render.com/docs](https://render.com/docs)
+- **Supabase Docs**: [supabase.com/docs](https://supabase.com/docs)
+- **Docker Best Practices**: [docs.docker.com](https://docs.docker.com/develop/dev-best-practices/)
+- **Spring Boot Production**: [spring.io/guides](https://spring.io/guides)
+
+---
+
+**✅ Your StudyMateAI app is now live on Render!** 🎉
 
 ### Deployment Requirements
 

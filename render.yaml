@@ -1,0 +1,108 @@
+# Render Blueprint for StudyMateAI
+# This file defines the infrastructure for deploying both backend and frontend services
+
+services:
+  # Backend Service - Spring Boot API
+  - type: web
+    name: studymate-backend
+    runtime: docker
+    plan: starter
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    env: production
+    buildCommand: ""
+    startCommand: ""
+    healthCheckPath: /actuator/health
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: SPRING_PROFILES_ACTIVE
+        value: production
+      - key: JAVA_OPTS
+        value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+UseG1GC"
+      - key: SPRING_DATASOURCE_URL
+        fromService:
+          type: postgres
+          name: studymate-db
+          property: connectionString
+      - key: SPRING_DATASOURCE_USERNAME
+        fromDatabase:
+          name: studymate-db
+          property: user
+      - key: SPRING_DATASOURCE_PASSWORD
+        fromDatabase:
+          name: studymate-db
+          property: password
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRATION
+        value: "86400000"
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_API_URL
+        value: "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent"
+      - key: SPRING_JPA_HIBERNATE_DDL_AUTO
+        value: "update"
+      - key: SPRING_JPA_SHOW_SQL
+        value: "false"
+      - key: CORS_ALLOWED_ORIGINS
+        value: "https://studymate-frontend.onrender.com"
+      - key: FILE_UPLOAD_DIR
+        value: "/app/uploads"
+      - key: MAX_FILE_SIZE
+        value: "50MB"
+      - key: MAX_REQUEST_SIZE
+        value: "50MB"
+
+  # Frontend Service - React Application
+  - type: web
+    name: studymate-frontend
+    runtime: docker
+    plan: starter
+    dockerfilePath: ./frontend/Dockerfile
+    dockerContext: ./frontend
+    env: production
+    buildCommand: ""
+    startCommand: ""
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: NODE_ENV
+        value: production
+      - key: REACT_APP_API_URL
+        fromService:
+          type: web
+          name: studymate-backend
+          property: url
+      - key: REACT_APP_WS_URL
+        value: "wss://studymate-backend.onrender.com"
+      - key: BACKEND_URL
+        fromService:
+          type: web
+          name: studymate-backend
+          property: url
+      - key: GENERATE_SOURCEMAP
+        value: "false"
+
+# Note: Database is already set up in Supabase, so no database service is defined here.
+# The backend will connect to your existing Supabase PostgreSQL instance using the
+# connection details from your application.properties file.
+
+# Deployment Configuration
+previewsEnabled: true
+rootDir: .
+
+# Build settings
+buildFilter:
+  paths:
+    - backend/**
+    - frontend/**
+  ignoredPaths:
+    - "*.md"
+    - ".git/**"
+    - "node_modules/**"
+    - "target/**"
+    - "build/**"
