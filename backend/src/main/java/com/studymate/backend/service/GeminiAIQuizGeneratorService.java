@@ -130,41 +130,44 @@ public class GeminiAIQuizGeneratorService {
             try {
                 return executeGeminiAPICall(prompt);
             } catch (WebClientResponseException e) {
-                // Only retry for 503 Service Unavailable errors
-                if (e.getStatusCode().value() == 503 && attempt < maxRetries) {
-                    logger.warn("Gemini API unavailable (attempt {}/{}), retrying in {}ms...",
-                            attempt, maxRetries, delayMs);
+                // Retry for both 503 and 429 errors
+                boolean shouldRetry = (e.getStatusCode().value() == 503 || e.getStatusCode().value() == 429) && attempt < maxRetries;
+                
+                if (shouldRetry) {
+                    long waitTime = e.getStatusCode().value() == 429 ? delayMs * 3 : delayMs; // Longer wait for rate limits
+                    logger.warn("Gemini API error {} (attempt {}/{}), retrying in {}ms...",
+                            e.getStatusCode().value(), attempt, maxRetries, waitTime);
                     try {
-                        Thread.sleep(delayMs);
-                        delayMs *= 2; // Exponential backoff
+                        Thread.sleep(waitTime);
+                        delayMs = Math.min(delayMs * 2, 30000); // Cap at 30 seconds
                     } catch (InterruptedException ie) {
                         Thread.currentThread().interrupt();
                         throw new RuntimeException("Interrupted while waiting to retry Gemini API call", ie);
                     }
                 } else {
-                    // Re-throw with user-friendly message for non-503 errors or final attempt
+                    // Re-throw with user-friendly message for non-retryable errors or final attempt
                     String errorMessage;
                     switch (e.getStatusCode().value()) {
                         case 503:
-                            errorMessage = "Gemini AI service is temporarily unavailable after multiple attempts. Please try again in a few minutes.";
+                            errorMessage = "Gemini AI service is temporarily unavailable after multiple attempts. Please try again in 5-10 minutes.";
                             break;
                         case 429:
-                            errorMessage = "API rate limit exceeded. Please wait before making another request.";
+                            errorMessage = "API rate limit exceeded. The service is experiencing high demand. Please try again in 15-30 minutes.";
                             break;
                         case 401:
-                            errorMessage = "Invalid API key. Please check your Gemini API configuration.";
+                            errorMessage = "Invalid API key. Please contact support to resolve this issue.";
                             break;
                         case 400:
-                            errorMessage = "Invalid request to Gemini API. Please check the input data.";
+                            errorMessage = "Invalid request to Gemini API. The study material content may be too large or contain unsupported characters.";
                             break;
                         default:
-                            errorMessage = "Gemini AI service error: " + e.getMessage();
+                            errorMessage = "Gemini AI service error: " + e.getMessage() + ". Please try again later.";
                     }
                     throw new RuntimeException(errorMessage);
                 }
             }
         }
-        throw new RuntimeException("Failed to call Gemini API after " + maxRetries + " attempts");
+        throw new RuntimeException("Failed to call Gemini AI after " + maxRetries + " attempts. The service may be experiencing high demand. Please try again in 15-30 minutes.");
     }
 
     /**

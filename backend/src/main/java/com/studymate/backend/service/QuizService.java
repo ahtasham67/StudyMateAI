@@ -37,6 +37,9 @@ public class QuizService {
     @Autowired
     private GeminiAIQuizGeneratorService geminiAIQuizGeneratorService;
 
+    @Autowired
+    private AIQuizGeneratorService fallbackQuizGeneratorService;
+
     public QuizResponse createQuiz(CreateQuizRequest request, User user) {
         // Validate study material exists and belongs to user
         Optional<StudyMaterial> studyMaterialOpt = studyMaterialRepository
@@ -64,9 +67,28 @@ public class QuizService {
             // Extract text from study material file
             String extractedText = extractTextFromStudyMaterial(studyMaterial);
             // System.out.println(extractedText);
-            // Generate quiz questions using real AI service
-            List<QuizQuestion> generatedQuestions = geminiAIQuizGeneratorService.generateQuizQuestionsFromText(
-                    studyMaterial, extractedText, request.getNumberOfQuestions(), request.getDurationMinutes());
+            
+            List<QuizQuestion> generatedQuestions = null;
+            
+            try {
+                // Try to generate quiz questions using real AI service first
+                generatedQuestions = geminiAIQuizGeneratorService.generateQuizQuestionsFromText(
+                        studyMaterial, extractedText, request.getNumberOfQuestions(), request.getDurationMinutes());
+            } catch (Exception aiException) {
+                // If AI service fails due to rate limiting or other issues, use fallback
+                String errorMessage = aiException.getMessage();
+                if (errorMessage != null && (errorMessage.contains("rate limit") || errorMessage.contains("temporarily unavailable"))) {
+                    // Use fallback quiz generator for rate limit issues
+                    generatedQuestions = fallbackQuizGeneratorService.generateQuestions(
+                            studyMaterial, request.getNumberOfQuestions(), request.getDifficulty());
+                    
+                    // Update quiz description to indicate fallback was used
+                    quiz.setDescription(quiz.getDescription() + " [Generated using fallback system due to AI service availability]");
+                } else {
+                    // Re-throw non-rate-limit exceptions
+                    throw aiException;
+                }
+            }
 
             // Set the questions to our quiz and update quiz reference for each question
             for (QuizQuestion question : generatedQuestions) {
@@ -77,9 +99,9 @@ public class QuizService {
             quiz = quizRepository.save(quiz);
 
         } catch (Exception e) {
-            // If AI generation fails, delete the quiz and throw exception
+            // If all generation methods fail, delete the quiz and throw exception
             quizRepository.delete(quiz);
-            throw new RuntimeException("Failed to generate quiz using AI: " + e.getMessage(), e);
+            throw new RuntimeException("Failed to generate quiz: " + e.getMessage(), e);
         }
 
         return convertToResponse(quiz);

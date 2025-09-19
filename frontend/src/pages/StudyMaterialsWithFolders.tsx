@@ -515,9 +515,29 @@ const StudyMaterialsWithFolders: React.FC = () => {
       });
     } catch (err: any) {
       console.error("Error generating quiz:", err);
+      
+      let errorMessage = "Failed to generate quiz. Please try again.";
+      
+      // Extract more specific error messages from the response
+      if (err.response?.data) {
+        if (typeof err.response.data === 'string') {
+          if (err.response.data.includes('rate limit exceeded')) {
+            errorMessage = "🕒 AI service is experiencing high demand. Please try again in 15-30 minutes.";
+          } else if (err.response.data.includes('temporarily unavailable')) {
+            errorMessage = "⚠️ AI service is temporarily unavailable. Please try again in 5-10 minutes.";
+          } else if (err.response.data.includes('too large')) {
+            errorMessage = "📄 Study material is too large for quiz generation. Try with a smaller file.";
+          } else {
+            errorMessage = err.response.data;
+          }
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
       setSnackbar({
         open: true,
-        message: "Failed to generate quiz. Please try again.",
+        message: errorMessage,
         severity: "error",
       });
     } finally {
