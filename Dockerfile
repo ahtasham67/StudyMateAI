@@ -1,91 +1,57 @@
-# Unified Dockerfile for StudyMateAI - Single Service Deployment
-# Builds React frontend and serves it alongside Spring Boot backend
+# Frontend Dockerfile for StudyMateAI React Application
+# Multi-stage build for optimized production deployment
 
-# Stage 1: Build React Frontend
-FROM node:18-alpine AS frontend-build
+# Stage 1: Build stage
+FROM node:18-alpine AS build
 
-WORKDIR /app/frontend
-
-# Copy frontend package files
-COPY frontend/package*.json ./
-
-# Install frontend dependencies
-RUN npm ci --silent
-
-# Copy frontend source
-COPY frontend/ ./
-
-# Build frontend for production
-RUN npm run build
-
-# Stage 2: Build Spring Boot Backend
-FROM maven:3.9-eclipse-temurin-17 AS backend-build
-
-WORKDIR /app/backend
-
-# Copy backend pom.xml
-COPY backend/pom.xml ./
-
-# Download backend dependencies
-RUN mvn dependency:go-offline -B
-
-# Copy backend source
-COPY backend/src ./src
-
-# Build backend JAR
-RUN mvn clean package -DskipTests -B
-
-# Stage 3: Production Runtime
-FROM openjdk:17-jdk-slim
-
-# Install nginx and curl
-RUN apt-get update && apt-get install -y \
-    nginx \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
-
-# Create non-root user
-RUN groupadd -r studymate && useradd -r -g studymate studymate
-
+# Set working directory
 WORKDIR /app
 
-# Copy built backend JAR
-COPY --from=backend-build /app/backend/target/*.jar app.jar
+# Copy package.json and package-lock.json (if exists)
+COPY package*.json ./
 
-# Copy built frontend to nginx
-COPY --from=frontend-build /app/frontend/build /usr/share/nginx/html
+# Install all dependencies (including devDependencies needed for build)
+RUN npm ci --silent
 
-# Copy nginx configuration for single service
-COPY nginx-unified.conf /etc/nginx/nginx.conf
+# Copy all source files
+COPY . .
 
-# Create upload directory
-RUN mkdir -p /app/uploads && chown -R studymate:studymate /app
+# Build the React app for production
+RUN npm run build
 
-# Ensure /var/cache/nginx exists before chown, then set permissions for nginx
+# Stage 2: Production stage with Nginx
+FROM nginx:alpine
+
+# Install curl for health checks
+RUN apk add --no-cache curl
+
+# Remove default nginx static assets
+RUN rm -rf /usr/share/nginx/html/*
+
+# Copy built React app from build stage
+COPY --from=build /app/build /usr/share/nginx/html
+
+# Copy custom nginx configuration file
+COPY nginx.conf /etc/nginx/nginx.conf
+
+# Create nginx cache directory if missing and set permissions
 RUN mkdir -p /var/cache/nginx && \
-    chown -R studymate:studymate /usr/share/nginx/html && \
-    chown -R studymate:studymate /var/cache/nginx && \
-    chown -R studymate:studymate /var/log/nginx && \
-    chown -R studymate:studymate /etc/nginx && \
+    chown -R nginx:nginx /usr/share/nginx/html && \
+    chown -R nginx:nginx /var/cache/nginx && \
+    chown -R nginx:nginx /var/log/nginx && \
+    chown -R nginx:nginx /etc/nginx/conf.d && \
     touch /var/run/nginx.pid && \
-    chown -R studymate:studymate /var/run/nginx.pid
+    chown -R nginx:nginx /var/run/nginx.pid
 
-# Switch to non-root user
-USER studymate
+# Switch to nginx user for security
+USER nginx
 
-# Expose port 8080 (unified service)
-EXPOSE 8080
+# Expose port 3000 (make sure nginx.conf listens on this port)
+EXPOSE 3000
 
-# Health check for unified service
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8080/api/actuator/health || exit 1
+# Health check to verify nginx is serving correctly
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:3000 || exit 1
 
-# JVM optimization
-ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+UseG1GC -XX:+UseStringDeduplication"
-
-# Create startup script
-COPY start-unified.sh /app/start-unified.sh
-RUN chmod +x /app/start-unified.sh
-
-# Start both nginx and Spring Boot
-ENTRYPOINT ["/app/start-unified.sh"]
+# Start nginx in foreground
+CMD ["nginx", "-g", "daemon off;"]
