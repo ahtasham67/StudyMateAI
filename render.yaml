@@ -22,24 +22,17 @@ services:
       - key: JAVA_OPTS
         value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+UseG1GC"
       - key: SPRING_DATASOURCE_URL
-        fromService:
-          type: postgres
-          name: studymate-db
-          property: connectionString
+        value: "jdbc:postgresql://aws-0-ap-south-1.pooler.supabase.com:5432/postgres"
       - key: SPRING_DATASOURCE_USERNAME
-        fromDatabase:
-          name: studymate-db
-          property: user
+        value: "postgres.vfhswjfjwqjmpcxjgedc"
       - key: SPRING_DATASOURCE_PASSWORD
-        fromDatabase:
-          name: studymate-db
-          property: password
+        value: "ahtasham2105067"
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_EXPIRATION
         value: "86400000"
       - key: GEMINI_API_KEY
-        sync: false
+        value: "AIzaSyA2DsN6bTwwuySdLO-VkPwuaKBW19ShbSk"
       - key: GEMINI_API_URL
         value: "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent"
       - key: SPRING_JPA_HIBERNATE_DDL_AUTO
