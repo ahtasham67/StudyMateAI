@@ -2,9 +2,7 @@ services:
   - type: web
     name: studymate-app
     plan: free
-    runtime: java 
-    buildCommand: cd frontend && npm install && npm run build && mkdir -p ../backend/src/main/resources/static && cp -r build/* ../backend/src/main/resources/static/ && cd ../backend && mvn clean package -DskipTests
-    startCommand: java -Dserver.port=$PORT -jar backend/target/*.jar
+    runtime: docker
     envVars:
       - key: PORT
         value: 10000
