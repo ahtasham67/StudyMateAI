@@ -283,6 +283,7 @@ const HomePage: React.FC = () => {
                   size="large"
                   variant="outlined"
                   startIcon={<PlayArrow />}
+                  onClick={() => window.open("https://youtu.be/pN9ZIMz9K1A?si=7EDU9z3uxCtmPiEk", "_blank")}
                   sx={{
                     px: 6,
                     py: 2,
